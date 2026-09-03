@@ -8,3 +8,6 @@ NOME_DISCIPLINA_2 = "Redes de Computadores e Sistemas Distribuídos"
 
 NOME_CURSO = "Bacharelado em Ciência da Computação"
 NOME_UNIVERSIDADE = "Universidade Estadual do Paraná"
+
+SERVIDOR_HOST = "localhost"
+SERVIDOR_PORTA = 8000
