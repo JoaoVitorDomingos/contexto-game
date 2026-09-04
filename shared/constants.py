@@ -11,3 +11,5 @@ NOME_UNIVERSIDADE = "Universidade Estadual do Paraná"
 
 SERVIDOR_HOST = "localhost"
 SERVIDOR_PORTA = 8000
+
+PALAVRA_SECRETA_TESTE = "castelo"
