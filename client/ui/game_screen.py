@@ -29,7 +29,10 @@ class GameScreen(tk.Frame):
         self.criar_interface()
 
         # Inicia a partida depois que a interface estiver pronta
-        self.after(100, self.iniciar_partida)
+        self.after(
+            100,
+            self.iniciar_partida
+        )
 
     # ==========================================================
     # INTERFACE
@@ -81,7 +84,10 @@ class GameScreen(tk.Frame):
 
         tk.Label(
             self,
-            text="Descubra a palavra secreta usando o ranking de proximidade.",
+            text=(
+                "Descubra a palavra secreta usando "
+                "o ranking de proximidade."
+            ),
             font=("Arial", 12),
             bg="#f5f7fb",
             fg="#6b7280"
@@ -90,10 +96,7 @@ class GameScreen(tk.Frame):
         )
 
         # ------------------------------------------------------
-        # ÁREA INFERIOR FIXA
-        #
-        # O rodapé é criado ANTES do histórico e usa side="bottom".
-        # Dessa forma, Dica/Desistir/Menu permanecem sempre visíveis.
+        # RODAPÉ FIXO
         # ------------------------------------------------------
 
         rodape = tk.Frame(
@@ -396,6 +399,24 @@ class GameScreen(tk.Frame):
                 anchor="center"
             )
 
+        # ======================================================
+        # CORES DO HISTÓRICO
+        # ======================================================
+
+        # Tentativas normais
+        self.tabela.tag_configure(
+            "tentativa",
+            background="#ffffff",
+            foreground="#374151"
+        )
+
+        # Dicas
+        self.tabela.tag_configure(
+            "dica",
+            background="#f3e8ff",
+            foreground="#7c3aed"
+        )
+
         barra = ttk.Scrollbar(
             area_tabela,
             orient="vertical",
@@ -472,9 +493,13 @@ class GameScreen(tk.Frame):
                 text=""
             )
 
-            self._mostrar_botao_nova_partida(False)
+            self._mostrar_botao_nova_partida(
+                False
+            )
 
-            self._atualizar_estado_botoes(True)
+            self._atualizar_estado_botoes(
+                True
+            )
 
             self.campo_palavra.focus_set()
 
@@ -484,7 +509,9 @@ class GameScreen(tk.Frame):
 
             self.partida_ativa = False
 
-            self._atualizar_estado_botoes(False)
+            self._atualizar_estado_botoes(
+                False
+            )
 
             self.label_status_conexao.config(
                 text="● Servidor indisponível",
@@ -544,7 +571,10 @@ class GameScreen(tk.Frame):
                 palavra
             )
 
-            if not resultado.get("sucesso", False):
+            if not resultado.get(
+                "sucesso",
+                False
+            ):
 
                 self.label_status.config(
                     text=resultado.get(
@@ -657,35 +687,51 @@ class GameScreen(tk.Frame):
         for item in self.tabela.get_children():
             self.tabela.delete(item)
 
-        # Adiciona tentativas
-        for indice, tentativa in enumerate(
+        # Adiciona histórico
+        for indice, registro in enumerate(
             historico,
             start=1
         ):
 
-            proximidade = tentativa.get(
+            palavra = registro.get(
+                "palavra",
+                ""
+            )
+
+            posicao = registro.get(
+                "posicao",
+                "-"
+            )
+
+            proximidade = registro.get(
                 "proximidade",
-                tentativa.get(
+                registro.get(
                     "similaridade",
                     "—"
                 )
             )
+
+            # Identifica se é tentativa ou dica
+            tipo = registro.get(
+                "tipo",
+                "tentativa"
+            )
+
+            if tipo == "dica":
+                tag = "dica"
+            else:
+                tag = "tentativa"
 
             self.tabela.insert(
                 "",
                 "end",
                 values=(
                     indice,
-                    tentativa.get(
-                        "palavra",
-                        ""
-                    ),
-                    tentativa.get(
-                        "posicao",
-                        "-"
-                    ),
+                    palavra,
+                    posicao,
                     proximidade
-                )
+                ),
+                tags=(tag,)
             )
 
     # ==========================================================
@@ -710,13 +756,13 @@ class GameScreen(tk.Frame):
                 False
             ):
 
-                dica = resultado.get(
-                    "dica"
-                ) or resultado.get(
-                    "palavra"
-                ) or resultado.get(
-                    "mensagem",
-                    "Dica recebida."
+                dica = (
+                    resultado.get("dica")
+                    or resultado.get("palavra")
+                    or resultado.get(
+                        "mensagem",
+                        "Dica recebida."
+                    )
                 )
 
                 posicao = resultado.get(
@@ -733,7 +779,9 @@ class GameScreen(tk.Frame):
                 texto = f"💡 Dica: {dica}"
 
                 if posicao is not None:
-                    texto += f" | Posição: #{posicao}"
+                    texto += (
+                        f" | Posição: #{posicao}"
+                    )
 
                 if proximidade is not None:
                     texto += (
@@ -745,6 +793,11 @@ class GameScreen(tk.Frame):
                     text=texto,
                     fg="#7c3aed"
                 )
+
+                # IMPORTANTE:
+                # Atualiza o histórico para que
+                # a dica apareça na tabela.
+                self.atualizar_historico()
 
             else:
 
@@ -818,6 +871,12 @@ class GameScreen(tk.Frame):
                 "não informada"
             )
 
+            # Recebe as 30 palavras do servidor
+            palavras_proximas = resultado.get(
+                "palavras_proximas",
+                []
+            )
+
             self.label_status.config(
                 text=(
                     "Partida encerrada. "
@@ -828,8 +887,11 @@ class GameScreen(tk.Frame):
 
             self._finalizar_partida()
 
+            # Mostra janela com palavra secreta
+            # e as 30 palavras mais próximas
             self._mostrar_desistencia(
-                palavra
+                palavra,
+                palavras_proximas
             )
 
         except Exception as erro:
@@ -934,18 +996,260 @@ class GameScreen(tk.Frame):
         )
 
     # ==========================================================
-    # MENSAGEM DE DESISTÊNCIA
+    # DESISTÊNCIA
     # ==========================================================
 
     def _mostrar_desistencia(
         self,
-        palavra
+        palavra,
+        palavras_proximas
     ):
 
-        messagebox.showinfo(
-            "Partida encerrada",
-            "A palavra secreta era:\n\n"
-            f"{palavra}"
+        janela = tk.Toplevel(
+            self
+        )
+
+        janela.title(
+            "Partida encerrada"
+        )
+
+        janela.geometry(
+            "700x650"
+        )
+
+        janela.minsize(
+            600,
+            500
+        )
+
+        janela.configure(
+            bg="#f5f7fb"
+        )
+
+        # Centraliza a janela
+        janela.transient(
+            self.winfo_toplevel()
+        )
+
+        janela.grab_set()
+
+        # ======================================================
+        # CABEÇALHO
+        # ======================================================
+
+        cabecalho = tk.Frame(
+            janela,
+            bg="#f5f7fb"
+        )
+
+        cabecalho.pack(
+            fill="x",
+            padx=30,
+            pady=(25, 15)
+        )
+
+        tk.Label(
+            cabecalho,
+            text="Partida encerrada",
+            font=("Arial", 20, "bold"),
+            bg="#f5f7fb",
+            fg="#1f2937"
+        ).pack()
+
+        tk.Label(
+            cabecalho,
+            text="Você desistiu da partida.",
+            font=("Arial", 11),
+            bg="#f5f7fb",
+            fg="#6b7280"
+        ).pack(
+            pady=(5, 0)
+        )
+
+        # ======================================================
+        # PALAVRA SECRETA
+        # ======================================================
+
+        quadro_secreto = tk.Frame(
+            janela,
+            bg="#fee2e2",
+            bd=1,
+            relief="solid"
+        )
+
+        quadro_secreto.pack(
+            fill="x",
+            padx=30,
+            pady=(0, 15)
+        )
+
+        tk.Label(
+            quadro_secreto,
+            text="A palavra secreta era:",
+            font=("Arial", 11, "bold"),
+            bg="#fee2e2",
+            fg="#991b1b"
+        ).pack(
+            pady=(12, 2)
+        )
+
+        tk.Label(
+            quadro_secreto,
+            text=str(palavra),
+            font=("Arial", 22, "bold"),
+            bg="#fee2e2",
+            fg="#dc2626"
+        ).pack(
+            pady=(0, 12)
+        )
+
+        # ======================================================
+        # TÍTULO DO RANKING
+        # ======================================================
+
+        tk.Label(
+            janela,
+            text="30 palavras mais próximas",
+            font=("Arial", 13, "bold"),
+            bg="#f5f7fb",
+            fg="#374151"
+        ).pack(
+            anchor="w",
+            padx=30,
+            pady=(5, 8)
+        )
+
+        # ======================================================
+        # TABELA
+        # ======================================================
+
+        quadro_tabela = tk.Frame(
+            janela,
+            bg="#ffffff",
+            bd=1,
+            relief="solid"
+        )
+
+        quadro_tabela.pack(
+            fill="both",
+            expand=True,
+            padx=30,
+            pady=(0, 15)
+        )
+
+        colunas = (
+            "posicao",
+            "palavra",
+            "proximidade"
+        )
+
+        tabela = ttk.Treeview(
+            quadro_tabela,
+            columns=colunas,
+            show="headings"
+        )
+
+        tabela.heading(
+            "posicao",
+            text="Posição"
+        )
+
+        tabela.heading(
+            "palavra",
+            text="Palavra"
+        )
+
+        tabela.heading(
+            "proximidade",
+            text="Proximidade"
+        )
+
+        tabela.column(
+            "posicao",
+            width=100,
+            anchor="center"
+        )
+
+        tabela.column(
+            "palavra",
+            width=300,
+            anchor="center"
+        )
+
+        tabela.column(
+            "proximidade",
+            width=160,
+            anchor="center"
+        )
+
+        barra = ttk.Scrollbar(
+            quadro_tabela,
+            orient="vertical",
+            command=tabela.yview
+        )
+
+        tabela.configure(
+            yscrollcommand=barra.set
+        )
+
+        tabela.pack(
+            side="left",
+            fill="both",
+            expand=True
+        )
+
+        barra.pack(
+            side="right",
+            fill="y"
+        )
+
+        # ======================================================
+        # PREENCHER AS 30 PALAVRAS
+        # ======================================================
+
+        for item in palavras_proximas:
+
+            tabela.insert(
+                "",
+                "end",
+                values=(
+                    item.get(
+                        "posicao",
+                        "-"
+                    ),
+                    item.get(
+                        "palavra",
+                        ""
+                    ),
+                    item.get(
+                        "proximidade",
+                        item.get(
+                            "similaridade",
+                            "-"
+                        )
+                    )
+                )
+            )
+
+        # ======================================================
+        # BOTÃO FECHAR
+        # ======================================================
+
+        tk.Button(
+            janela,
+            text="Fechar",
+            width=15,
+            font=("Arial", 10, "bold"),
+            bg="#374151",
+            fg="white",
+            activebackground="#1f2937",
+            activeforeground="white",
+            relief="flat",
+            cursor="hand2",
+            command=janela.destroy
+        ).pack(
+            pady=(0, 20),
+            ipady=5
         )
 
     # ==========================================================
