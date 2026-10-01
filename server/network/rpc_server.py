@@ -20,29 +20,41 @@ class RPCServer:
         self.registrar_metodos()
 
     def registrar_metodos(self):
+
+        # Teste de conexão
         self.servidor.register_function(
             self.ping,
             "ping"
         )
 
+        # Iniciar partida
         self.servidor.register_function(
             self.iniciar_partida,
             "iniciar_partida"
         )
 
+        # Enviar tentativa
         self.servidor.register_function(
             self.tentar_palavra,
             "tentar_palavra"
         )
 
+        # Histórico
         self.servidor.register_function(
             self.obter_historico,
             "obter_historico"
         )
 
+        # Desistir
         self.servidor.register_function(
             self.desistir,
             "desistir"
+        )
+
+        # Solicitar dica
+        self.servidor.register_function(
+            self.solicitar_dica,
+            "solicitar_dica"
         )
 
     def ping(self):
@@ -59,6 +71,9 @@ class RPCServer:
 
     def desistir(self):
         return self.game_manager.desistir()
+
+    def solicitar_dica(self):
+        return self.game_manager.solicitar_dica()
 
     def iniciar(self):
         print(
