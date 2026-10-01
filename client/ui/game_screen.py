@@ -10,14 +10,42 @@ class GameScreen(tk.Frame):
     Tela principal da partida.
 
     A lógica da partida permanece no servidor.
-    O cliente é responsável apenas pela interface
+    O cliente é responsável pela interface
     e pela comunicação através do RPC.
     """
 
+    # ==========================================================
+    # CORES
+    # ==========================================================
+
+    BG = "#0f172a"
+    BG_DARK = "#0b1120"
+    PANEL = "#1e293b"
+    PANEL_LIGHT = "#263449"
+
+    WHITE = "#f8fafc"
+    TEXT = "#e2e8f0"
+    TEXT_MUTED = "#94a3b8"
+
+    BLUE = "#3b82f6"
+    BLUE_HOVER = "#2563eb"
+
+    PURPLE = "#8b5cf6"
+    PURPLE_HOVER = "#7c3aed"
+
+    GREEN = "#22c55e"
+    GREEN_HOVER = "#16a34a"
+
+    RED = "#ef4444"
+    RED_HOVER = "#dc2626"
+
+    BORDER = "#334155"
+
     def __init__(self, root, screen_manager):
+
         super().__init__(
             root,
-            bg="#f5f7fb"
+            bg=self.BG
         )
 
         self.screen_manager = screen_manager
@@ -26,13 +54,60 @@ class GameScreen(tk.Frame):
         self.partida_ativa = False
         self._criando_partida = False
 
+        self.tela_cheia = False
+
         self.criar_interface()
 
-        # Inicia a partida depois que a interface estiver pronta
+        # Tela cheia depois que a janela estiver pronta
         self.after(
             100,
+            self._ativar_tela_cheia
+        )
+
+        # Inicia a partida
+        self.after(
+            200,
             self.iniciar_partida
         )
+
+        # ESC alterna tela cheia
+        self.winfo_toplevel().bind(
+            "<Escape>",
+            self.alternar_tela_cheia
+        )
+
+    # ==========================================================
+    # TELA CHEIA
+    # ==========================================================
+
+    def _ativar_tela_cheia(self):
+
+        janela = self.winfo_toplevel()
+
+        try:
+            janela.attributes(
+                "-fullscreen",
+                True
+            )
+
+            self.tela_cheia = True
+
+        except tk.TclError:
+            pass
+
+    def alternar_tela_cheia(self, event=None):
+
+        janela = self.winfo_toplevel()
+
+        self.tela_cheia = not self.tela_cheia
+
+        try:
+            janela.attributes(
+                "-fullscreen",
+                self.tela_cheia
+            )
+        except tk.TclError:
+            pass
 
     # ==========================================================
     # INTERFACE
@@ -41,255 +116,324 @@ class GameScreen(tk.Frame):
     def criar_interface(self):
 
         # ------------------------------------------------------
+        # CONTAINER PRINCIPAL
+        # ------------------------------------------------------
+
+        self.container = tk.Frame(
+            self,
+            bg=self.BG
+        )
+
+        self.container.pack(
+            fill="both",
+            expand=True
+        )
+
+        # ------------------------------------------------------
         # CABEÇALHO
         # ------------------------------------------------------
 
+        self.criar_cabecalho()
+
+        # ------------------------------------------------------
+        # CONTEÚDO
+        # ------------------------------------------------------
+
+        conteudo = tk.Frame(
+            self.container,
+            bg=self.BG
+        )
+
+        conteudo.pack(
+            fill="both",
+            expand=True,
+            padx=50,
+            pady=(10, 20)
+        )
+
+        # ------------------------------------------------------
+        # TÍTULO DA PARTIDA
+        # ------------------------------------------------------
+
+        titulo = tk.Label(
+            conteudo,
+            text="Descubra a palavra secreta",
+            font=("Arial", 24, "bold"),
+            bg=self.BG,
+            fg=self.WHITE
+        )
+
+        titulo.pack(
+            pady=(0, 4)
+        )
+
+        subtitulo = tk.Label(
+            conteudo,
+            text=(
+                "Quanto menor a posição no ranking, "
+                "mais próxima sua palavra está da resposta."
+            ),
+            font=("Arial", 11),
+            bg=self.BG,
+            fg=self.TEXT_MUTED
+        )
+
+        subtitulo.pack(
+            pady=(0, 18)
+        )
+
+        # ------------------------------------------------------
+        # ÁREA PRINCIPAL
+        # ------------------------------------------------------
+
+        area_principal = tk.Frame(
+            conteudo,
+            bg=self.BG
+        )
+
+        area_principal.pack(
+            fill="both",
+            expand=True
+        )
+
+        # ------------------------------------------------------
+        # PAINEL ESQUERDO
+        # ------------------------------------------------------
+
+        painel_esquerdo = tk.Frame(
+            area_principal,
+            bg=self.BG
+        )
+
+        painel_esquerdo.pack(
+            side="left",
+            fill="both",
+            expand=True,
+            padx=(0, 12)
+        )
+
+        # Entrada
+        self.criar_painel_entrada(
+            painel_esquerdo
+        )
+
+        # Cards de informação
+        self.criar_cards(
+            painel_esquerdo
+        )
+
+        # ------------------------------------------------------
+        # PAINEL DIREITO
+        # ------------------------------------------------------
+
+        painel_direito = tk.Frame(
+            area_principal,
+            bg=self.PANEL,
+            highlightbackground=self.BORDER,
+            highlightthickness=1
+        )
+
+        painel_direito.pack(
+            side="right",
+            fill="both",
+            expand=True,
+            padx=(12, 0)
+        )
+
+        self.criar_historico(
+            painel_direito
+        )
+
+        # ------------------------------------------------------
+        # RODAPÉ
+        # ------------------------------------------------------
+
+        self.criar_rodape()
+
+        # Estado inicial
+        self._atualizar_estado_botoes(
+            False
+        )
+
+    # ==========================================================
+    # CABEÇALHO
+    # ==========================================================
+
+    def criar_cabecalho(self):
+
         cabecalho = tk.Frame(
-            self,
-            bg="#f5f7fb"
+            self.container,
+            bg=self.BG_DARK,
+            height=80
         )
 
         cabecalho.pack(
-            fill="x",
-            padx=40,
-            pady=(25, 10)
+            fill="x"
+        )
+
+        cabecalho.pack_propagate(
+            False
+        )
+
+        # ------------------------------------------------------
+        # ESQUERDA
+        # ------------------------------------------------------
+
+        esquerda = tk.Frame(
+            cabecalho,
+            bg=self.BG_DARK
+        )
+
+        esquerda.pack(
+            side="left",
+            padx=45
         )
 
         tk.Label(
-            cabecalho,
+            esquerda,
             text=NOME_DO_JOGO,
-            font=("Arial", 27, "bold"),
-            bg="#f5f7fb",
-            fg="#1f2937"
+            font=("Arial", 25, "bold"),
+            bg=self.BG_DARK,
+            fg=self.WHITE
         ).pack(
             side="left"
         )
 
-        self.label_status_conexao = tk.Label(
-            cabecalho,
-            text="Conectando...",
-            font=("Arial", 10, "bold"),
-            bg="#f5f7fb",
-            fg="#6b7280"
-        )
-
-        self.label_status_conexao.pack(
-            side="right",
+        tk.Label(
+            esquerda,
+            text="  •  JOGO SEMÂNTICO",
+            font=("Arial", 9, "bold"),
+            bg=self.BG_DARK,
+            fg=self.PURPLE
+        ).pack(
+            side="left",
             pady=8
         )
 
         # ------------------------------------------------------
-        # SUBTÍTULO
+        # DIREITA
         # ------------------------------------------------------
 
+        direita = tk.Frame(
+            cabecalho,
+            bg=self.BG_DARK
+        )
+
+        direita.pack(
+            side="right",
+            padx=45
+        )
+
+        self.label_status_conexao = tk.Label(
+            direita,
+            text="●  Conectando...",
+            font=("Arial", 10, "bold"),
+            bg=self.BG_DARK,
+            fg="#f59e0b"
+        )
+
+        self.label_status_conexao.pack(
+            side="left",
+            padx=(0, 20)
+        )
+
         tk.Label(
-            self,
-            text=(
-                "Descubra a palavra secreta usando "
-                "o ranking de proximidade."
-            ),
-            font=("Arial", 12),
-            bg="#f5f7fb",
-            fg="#6b7280"
+            direita,
+            text="ESC  Tela cheia",
+            font=("Arial", 9),
+            bg=self.BG_DARK,
+            fg=self.TEXT_MUTED
         ).pack(
+            side="left"
+        )
+
+    # ==========================================================
+    # PAINEL DE ENTRADA
+    # ==========================================================
+
+    def criar_painel_entrada(
+        self,
+        parent
+    ):
+
+        painel = tk.Frame(
+            parent,
+            bg=self.PANEL,
+            highlightbackground=self.BORDER,
+            highlightthickness=1
+        )
+
+        painel.pack(
+            fill="x",
             pady=(0, 15)
         )
 
-        # ------------------------------------------------------
-        # RODAPÉ FIXO
-        # ------------------------------------------------------
-
-        rodape = tk.Frame(
-            self,
-            bg="#f5f7fb"
-        )
-
-        rodape.pack(
-            side="bottom",
-            fill="x",
-            padx=55,
-            pady=(5, 18)
-        )
-
-        # Mensagem de dica
-        self.label_dica = tk.Label(
-            rodape,
-            text="",
-            font=("Arial", 11, "bold"),
-            bg="#f5f7fb",
-            fg="#7c3aed"
-        )
-
-        self.label_dica.pack(
-            pady=(0, 3)
-        )
-
-        # Status da partida
-        self.label_status = tk.Label(
-            rodape,
-            text="Iniciando partida...",
-            font=("Arial", 10),
-            bg="#f5f7fb",
-            fg="#6b7280"
-        )
-
-        self.label_status.pack(
-            pady=(0, 8)
-        )
-
-        # Área dos botões
-        area_botoes = tk.Frame(
-            rodape,
-            bg="#f5f7fb"
-        )
-
-        area_botoes.pack()
-
-        # ------------------------------------------------------
-        # BOTÃO DICA
-        # ------------------------------------------------------
-
-        self.botao_dica = tk.Button(
-            area_botoes,
-            text="💡 Dica",
-            width=15,
+        tk.Label(
+            painel,
+            text="SUA TENTATIVA",
             font=("Arial", 10, "bold"),
-            bg="#7c3aed",
-            fg="white",
-            activebackground="#6d28d9",
-            activeforeground="white",
-            relief="flat",
-            cursor="hand2",
-            command=self.solicitar_dica
-        )
-
-        self.botao_dica.pack(
-            side="left",
-            padx=5,
-            ipady=5
-        )
-
-        # ------------------------------------------------------
-        # BOTÃO DESISTIR
-        # ------------------------------------------------------
-
-        self.botao_desistir = tk.Button(
-            area_botoes,
-            text="Desistir",
-            width=15,
-            font=("Arial", 10, "bold"),
-            bg="#dc2626",
-            fg="white",
-            activebackground="#b91c1c",
-            activeforeground="white",
-            relief="flat",
-            cursor="hand2",
-            command=self.desistir
-        )
-
-        self.botao_desistir.pack(
-            side="left",
-            padx=5,
-            ipady=5
-        )
-
-        # ------------------------------------------------------
-        # BOTÃO NOVA PARTIDA
-        # ------------------------------------------------------
-
-        self.botao_nova_partida = tk.Button(
-            area_botoes,
-            text="Nova partida",
-            width=15,
-            font=("Arial", 10, "bold"),
-            bg="#16a34a",
-            fg="white",
-            activebackground="#15803d",
-            activeforeground="white",
-            relief="flat",
-            cursor="hand2",
-            command=self.nova_partida
-        )
-
-        # Não aparece inicialmente.
-        # Será mostrado quando a partida terminar.
-
-        # ------------------------------------------------------
-        # BOTÃO MENU
-        # ------------------------------------------------------
-
-        self.botao_menu = tk.Button(
-            area_botoes,
-            text="Menu",
-            width=15,
-            font=("Arial", 10),
-            bg="#e5e7eb",
-            fg="#374151",
-            activebackground="#d1d5db",
-            activeforeground="#111827",
-            relief="flat",
-            cursor="hand2",
-            command=self.voltar_menu
-        )
-
-        self.botao_menu.pack(
-            side="left",
-            padx=5,
-            ipady=5
-        )
-
-        # ------------------------------------------------------
-        # ENTRADA DE PALAVRA
-        # ------------------------------------------------------
-
-        painel_entrada = tk.Frame(
-            self,
-            bg="#ffffff",
-            bd=1,
-            relief="solid"
-        )
-
-        painel_entrada.pack(
-            fill="x",
-            padx=55,
-            pady=5
+            bg=self.PANEL,
+            fg=self.PURPLE
+        ).pack(
+            anchor="w",
+            padx=25,
+            pady=(22, 4)
         )
 
         tk.Label(
-            painel_entrada,
+            painel,
             text="Digite uma palavra",
-            font=("Arial", 11, "bold"),
-            bg="#ffffff",
-            fg="#374151"
+            font=("Arial", 18, "bold"),
+            bg=self.PANEL,
+            fg=self.WHITE
         ).pack(
             anchor="w",
-            padx=18,
-            pady=(14, 4)
+            padx=25,
+            pady=(0, 14)
         )
 
         linha = tk.Frame(
-            painel_entrada,
-            bg="#ffffff"
+            painel,
+            bg=self.PANEL
         )
 
         linha.pack(
             fill="x",
-            padx=18,
-            pady=(0, 15)
+            padx=25,
+            pady=(0, 25)
+        )
+
+        # Campo
+        campo_frame = tk.Frame(
+            linha,
+            bg=self.BG_DARK
+        )
+
+        campo_frame.pack(
+            side="left",
+            fill="x",
+            expand=True
         )
 
         self.campo_palavra = tk.Entry(
-            linha,
-            font=("Arial", 14),
-            relief="solid",
-            bd=1
+            campo_frame,
+            font=("Arial", 16),
+            bg=self.BG_DARK,
+            fg=self.WHITE,
+            insertbackground=self.WHITE,
+            relief="flat",
+            bd=0
         )
 
         self.campo_palavra.pack(
-            side="left",
             fill="x",
-            expand=True,
-            ipady=7
+            ipady=13,
+            padx=15
+        )
+
+        self.campo_palavra.insert(
+            0,
+            ""
         )
 
         self.campo_palavra.bind(
@@ -297,66 +441,237 @@ class GameScreen(tk.Frame):
             lambda event: self.enviar_tentativa()
         )
 
+        # Botão enviar
         self.botao_enviar = tk.Button(
             linha,
-            text="Enviar",
-            width=13,
-            font=("Arial", 10, "bold"),
-            bg="#2563eb",
-            fg="white",
-            activebackground="#1d4ed8",
-            activeforeground="white",
+            text="ENVIAR  →",
+            width=14,
+            font=("Arial", 11, "bold"),
+            bg=self.BLUE,
+            fg=self.WHITE,
+            activebackground=self.BLUE_HOVER,
+            activeforeground=self.WHITE,
             relief="flat",
+            bd=0,
             cursor="hand2",
             command=self.enviar_tentativa
         )
 
         self.botao_enviar.pack(
             side="left",
-            padx=(10, 0),
-            ipady=5
+            padx=(12, 0),
+            ipady=10
+        )
+
+    # ==========================================================
+    # CARDS
+    # ==========================================================
+
+    def criar_cards(
+        self,
+        parent
+    ):
+
+        area = tk.Frame(
+            parent,
+            bg=self.BG
+        )
+
+        area.pack(
+            fill="x",
+            pady=(0, 15)
         )
 
         # ------------------------------------------------------
-        # HISTÓRICO
+        # CARD POSIÇÃO
         # ------------------------------------------------------
 
-        painel_historico = tk.Frame(
-            self,
-            bg="#ffffff",
-            bd=1,
-            relief="solid"
+        self.card_posicao = tk.Frame(
+            area,
+            bg=self.PANEL,
+            highlightbackground=self.BORDER,
+            highlightthickness=1
         )
 
-        painel_historico.pack(
+        self.card_posicao.pack(
+            side="left",
             fill="both",
             expand=True,
-            padx=55,
-            pady=(12, 5)
+            padx=(0, 7)
         )
 
         tk.Label(
-            painel_historico,
-            text="Histórico de tentativas",
-            font=("Arial", 12, "bold"),
-            bg="#ffffff",
-            fg="#374151"
+            self.card_posicao,
+            text="ÚLTIMA POSIÇÃO",
+            font=("Arial", 9, "bold"),
+            bg=self.PANEL,
+            fg=self.TEXT_MUTED
         ).pack(
-            anchor="w",
-            padx=18,
-            pady=(13, 8)
+            pady=(18, 4)
         )
 
-        area_tabela = tk.Frame(
-            painel_historico,
-            bg="#ffffff"
+        self.label_posicao = tk.Label(
+            self.card_posicao,
+            text="—",
+            font=("Arial", 30, "bold"),
+            bg=self.PANEL,
+            fg=self.BLUE
         )
 
-        area_tabela.pack(
+        self.label_posicao.pack(
+            pady=(0, 4)
+        )
+
+        tk.Label(
+            self.card_posicao,
+            text="quanto menor, melhor",
+            font=("Arial", 8),
+            bg=self.PANEL,
+            fg=self.TEXT_MUTED
+        ).pack(
+            pady=(0, 18)
+        )
+
+        # ------------------------------------------------------
+        # CARD PROXIMIDADE
+        # ------------------------------------------------------
+
+        self.card_proximidade = tk.Frame(
+            area,
+            bg=self.PANEL,
+            highlightbackground=self.BORDER,
+            highlightthickness=1
+        )
+
+        self.card_proximidade.pack(
+            side="left",
             fill="both",
             expand=True,
-            padx=18,
-            pady=(0, 15)
+            padx=(7, 0)
+        )
+
+        tk.Label(
+            self.card_proximidade,
+            text="PROXIMIDADE",
+            font=("Arial", 9, "bold"),
+            bg=self.PANEL,
+            fg=self.TEXT_MUTED
+        ).pack(
+            pady=(18, 4)
+        )
+
+        self.label_proximidade = tk.Label(
+            self.card_proximidade,
+            text="—",
+            font=("Arial", 30, "bold"),
+            bg=self.PANEL,
+            fg=self.PURPLE
+        )
+
+        self.label_proximidade.pack(
+            pady=(0, 4)
+        )
+
+        tk.Label(
+            self.card_proximidade,
+            text="similaridade semântica",
+            font=("Arial", 8),
+            bg=self.PANEL,
+            fg=self.TEXT_MUTED
+        ).pack(
+            pady=(0, 18)
+        )
+
+        # ------------------------------------------------------
+        # MENSAGEM
+        # ------------------------------------------------------
+
+        self.label_status = tk.Label(
+            parent,
+            text="Preparando partida...",
+            font=("Arial", 10),
+            bg=self.BG,
+            fg=self.TEXT_MUTED,
+            wraplength=700
+        )
+
+        self.label_status.pack(
+            pady=(0, 5)
+        )
+
+        # Dica
+        self.label_dica = tk.Label(
+            parent,
+            text="",
+            font=("Arial", 10, "bold"),
+            bg=self.BG,
+            fg=self.PURPLE,
+            wraplength=700
+        )
+
+        self.label_dica.pack(
+            pady=(0, 5)
+        )
+
+    # ==========================================================
+    # HISTÓRICO
+    # ==========================================================
+
+    def criar_historico(
+        self,
+        parent
+    ):
+
+        # ------------------------------------------------------
+        # CABEÇALHO
+        # ------------------------------------------------------
+
+        cabecalho = tk.Frame(
+            parent,
+            bg=self.PANEL
+        )
+
+        cabecalho.pack(
+            fill="x",
+            padx=22,
+            pady=(20, 10)
+        )
+
+        tk.Label(
+            cabecalho,
+            text="HISTÓRICO",
+            font=("Arial", 10, "bold"),
+            bg=self.PANEL,
+            fg=self.PURPLE
+        ).pack(
+            anchor="w"
+        )
+
+        tk.Label(
+            cabecalho,
+            text="Suas palavras e posições no ranking",
+            font=("Arial", 12, "bold"),
+            bg=self.PANEL,
+            fg=self.WHITE
+        ).pack(
+            anchor="w",
+            pady=(3, 0)
+        )
+
+        # ------------------------------------------------------
+        # TABELA
+        # ------------------------------------------------------
+
+        area = tk.Frame(
+            parent,
+            bg=self.PANEL
+        )
+
+        area.pack(
+            fill="both",
+            expand=True,
+            padx=20,
+            pady=(0, 20)
         )
 
         colunas = (
@@ -367,58 +682,136 @@ class GameScreen(tk.Frame):
         )
 
         self.tabela = ttk.Treeview(
-            area_tabela,
+            area,
             columns=colunas,
             show="headings",
-            height=9
+            selectmode="browse"
         )
 
-        cabecalhos = {
-            "ordem": "#",
-            "palavra": "Palavra",
-            "posicao": "Posição no ranking",
-            "proximidade": "Proximidade"
-        }
+        # Cabeçalhos
+        self.tabela.heading(
+            "ordem",
+            text="#"
+        )
 
-        larguras = {
-            "ordem": 55,
-            "palavra": 250,
-            "posicao": 180,
-            "proximidade": 180
-        }
+        self.tabela.heading(
+            "palavra",
+            text="PALAVRA"
+        )
 
-        for coluna in colunas:
-            self.tabela.heading(
-                coluna,
-                text=cabecalhos[coluna]
+        self.tabela.heading(
+            "posicao",
+            text="POSIÇÃO"
+        )
+
+        self.tabela.heading(
+            "proximidade",
+            text="PROXIMIDADE"
+        )
+
+        # Colunas
+        self.tabela.column(
+            "ordem",
+            width=55,
+            minwidth=45,
+            anchor="center"
+        )
+
+        self.tabela.column(
+            "palavra",
+            width=180,
+            minwidth=120,
+            anchor="center"
+        )
+
+        self.tabela.column(
+            "posicao",
+            width=120,
+            minwidth=90,
+            anchor="center"
+        )
+
+        self.tabela.column(
+            "proximidade",
+            width=130,
+            minwidth=100,
+            anchor="center"
+        )
+
+        # ------------------------------------------------------
+        # ESTILOS
+        # ------------------------------------------------------
+
+        style = ttk.Style()
+
+        try:
+            style.theme_use(
+                "clam"
             )
+        except tk.TclError:
+            pass
 
-            self.tabela.column(
-                coluna,
-                width=larguras[coluna],
-                anchor="center"
-            )
+        style.configure(
+            "Treeview",
+            background=self.BG_DARK,
+            foreground=self.TEXT,
+            fieldbackground=self.BG_DARK,
+            rowheight=38,
+            borderwidth=0,
+            font=("Arial", 10)
+        )
 
-        # ======================================================
-        # CORES DO HISTÓRICO
-        # ======================================================
+        style.configure(
+            "Treeview.Heading",
+            background=self.PANEL_LIGHT,
+            foreground=self.WHITE,
+            relief="flat",
+            font=("Arial", 9, "bold")
+        )
 
-        # Tentativas normais
+        style.map(
+            "Treeview",
+            background=[
+                (
+                    "selected",
+                    "#334155"
+                )
+            ],
+            foreground=[
+                (
+                    "selected",
+                    self.WHITE
+                )
+            ]
+        )
+
+        # Tentativa
         self.tabela.tag_configure(
             "tentativa",
-            background="#ffffff",
-            foreground="#374151"
+            background=self.BG_DARK,
+            foreground=self.TEXT
         )
 
-        # Dicas
+        # Dica
         self.tabela.tag_configure(
             "dica",
-            background="#f3e8ff",
-            foreground="#7c3aed"
+            background="#281b45",
+            foreground="#c4b5fd"
         )
 
+        # Vitória
+        self.tabela.tag_configure(
+            "vitoria",
+            background="#123524",
+            foreground="#86efac"
+        )
+
+        # ------------------------------------------------------
+        # SCROLL
+        # ------------------------------------------------------
+
         barra = ttk.Scrollbar(
-            area_tabela,
+            area,
             orient="vertical",
             command=self.tabela.yview
         )
@@ -438,8 +831,131 @@ class GameScreen(tk.Frame):
             fill="y"
         )
 
-        # Estado inicial
-        self._atualizar_estado_botoes(False)
+    # ==========================================================
+    # RODAPÉ
+    # ==========================================================
+
+    def criar_rodape(self):
+
+        rodape = tk.Frame(
+            self.container,
+            bg=self.BG_DARK,
+            height=78
+        )
+
+        rodape.pack(
+            side="bottom",
+            fill="x"
+        )
+
+        rodape.pack_propagate(
+            False
+        )
+
+        area = tk.Frame(
+            rodape,
+            bg=self.BG_DARK
+        )
+
+        area.pack(
+            pady=15
+        )
+
+        # ------------------------------------------------------
+        # DICA
+        # ------------------------------------------------------
+
+        self.botao_dica = tk.Button(
+            area,
+            text="💡  DICA",
+            width=14,
+            font=("Arial", 10, "bold"),
+            bg=self.PURPLE,
+            fg=self.WHITE,
+            activebackground=self.PURPLE_HOVER,
+            activeforeground=self.WHITE,
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            command=self.solicitar_dica
+        )
+
+        self.botao_dica.pack(
+            side="left",
+            padx=5,
+            ipady=7
+        )
+
+        # ------------------------------------------------------
+        # DESISTIR
+        # ------------------------------------------------------
+
+        self.botao_desistir = tk.Button(
+            area,
+            text="🏳  DESISTIR",
+            width=14,
+            font=("Arial", 10, "bold"),
+            bg=self.RED,
+            fg=self.WHITE,
+            activebackground=self.RED_HOVER,
+            activeforeground=self.WHITE,
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            command=self.desistir
+        )
+
+        self.botao_desistir.pack(
+            side="left",
+            padx=5,
+            ipady=7
+        )
+
+        # ------------------------------------------------------
+        # NOVA PARTIDA
+        # ------------------------------------------------------
+
+        self.botao_nova_partida = tk.Button(
+            area,
+            text="↻  NOVA PARTIDA",
+            width=16,
+            font=("Arial", 10, "bold"),
+            bg=self.GREEN,
+            fg=self.WHITE,
+            activebackground=self.GREEN_HOVER,
+            activeforeground=self.WHITE,
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            command=self.nova_partida
+        )
+
+        # Não aparece inicialmente.
+
+        # ------------------------------------------------------
+        # MENU
+        # ------------------------------------------------------
+
+        self.botao_menu = tk.Button(
+            area,
+            text="←  MENU",
+            width=12,
+            font=("Arial", 10, "bold"),
+            bg=self.PANEL_LIGHT,
+            fg=self.TEXT,
+            activebackground=self.BORDER,
+            activeforeground=self.WHITE,
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            command=self.voltar_menu
+        )
+
+        self.botao_menu.pack(
+            side="left",
+            padx=5,
+            ipady=7
+        )
 
     # ==========================================================
     # INICIAR PARTIDA
@@ -453,25 +969,30 @@ class GameScreen(tk.Frame):
         self._criando_partida = True
 
         self.label_status_conexao.config(
-            text="Conectando...",
-            fg="#d97706"
+            text="●  Conectando...",
+            fg="#f59e0b"
         )
 
         try:
 
             if not self.rpc.testar_conexao():
+
                 raise ConnectionError(
                     "Não foi possível conectar ao servidor."
                 )
 
             self.label_status_conexao.config(
-                text="● Servidor conectado",
-                fg="#16a34a"
+                text="●  Servidor conectado",
+                fg=self.GREEN
             )
 
             resultado = self.rpc.iniciar_partida()
 
-            if not resultado.get("sucesso", False):
+            if not resultado.get(
+                "sucesso",
+                False
+            ):
+
                 raise RuntimeError(
                     resultado.get(
                         "mensagem",
@@ -482,11 +1003,8 @@ class GameScreen(tk.Frame):
             self.partida_ativa = True
 
             self.label_status.config(
-                text=resultado.get(
-                    "mensagem",
-                    "Partida iniciada."
-                ),
-                fg="#16a34a"
+                text="Partida iniciada. Boa sorte!",
+                fg=self.GREEN
             )
 
             self.label_dica.config(
@@ -501,6 +1019,8 @@ class GameScreen(tk.Frame):
                 True
             )
 
+            self._limpar_cards()
+
             self.campo_palavra.focus_set()
 
             self.atualizar_historico()
@@ -514,13 +1034,13 @@ class GameScreen(tk.Frame):
             )
 
             self.label_status_conexao.config(
-                text="● Servidor indisponível",
-                fg="#dc2626"
+                text="●  Servidor indisponível",
+                fg=self.RED
             )
 
             self.label_status.config(
                 text=str(erro),
-                fg="#dc2626"
+                fg=self.RED
             )
 
             messagebox.showerror(
@@ -531,6 +1051,7 @@ class GameScreen(tk.Frame):
             )
 
         finally:
+
             self._criando_partida = False
 
     # ==========================================================
@@ -543,7 +1064,7 @@ class GameScreen(tk.Frame):
 
             self.label_status.config(
                 text="Não há uma partida ativa.",
-                fg="#dc2626"
+                fg=self.RED
             )
 
             return
@@ -554,7 +1075,7 @@ class GameScreen(tk.Frame):
 
             self.label_status.config(
                 text="Digite uma palavra.",
-                fg="#d97706"
+                fg="#f59e0b"
             )
 
             self.campo_palavra.focus_set()
@@ -581,7 +1102,7 @@ class GameScreen(tk.Frame):
                         "mensagem",
                         "Tentativa recusada."
                     ),
-                    fg="#d97706"
+                    fg="#f59e0b"
                 )
 
                 return
@@ -611,19 +1132,53 @@ class GameScreen(tk.Frame):
                 False
             )
 
-            self.partida_ativa = resultado.get(
-                "partida_ativa",
-                not acertou
-            )
+            self.partida_ativa = not acertou
+
+            # Atualiza cards
+            if posicao != "-":
+
+                self.label_posicao.config(
+                    text=f"#{posicao}"
+                )
+
+            if proximidade != "-":
+
+                try:
+
+                    self.label_proximidade.config(
+                        text=f"{float(proximidade):.4f}"
+                    )
+
+                except (
+                    ValueError,
+                    TypeError
+                ):
+
+                    self.label_proximidade.config(
+                        text=str(proximidade)
+                    )
+
+            # --------------------------------------------------
+            # ACERTOU
+            # --------------------------------------------------
 
             if acertou:
 
                 self.label_status.config(
                     text=(
-                        f"🎉 Parabéns! Você acertou "
-                        f"a palavra em #{posicao}!"
+                        "🎉 Você encontrou a palavra secreta!"
                     ),
-                    fg="#16a34a"
+                    fg=self.GREEN
+                )
+
+                self.label_posicao.config(
+                    text="✓",
+                    fg=self.GREEN
+                )
+
+                self.label_proximidade.config(
+                    text="1.0000",
+                    fg=self.GREEN
                 )
 
                 self._mostrar_vitoria(
@@ -632,22 +1187,25 @@ class GameScreen(tk.Frame):
 
                 self._finalizar_partida()
 
+            # --------------------------------------------------
+            # ERRO
+            # --------------------------------------------------
+
             else:
 
                 self.label_status.config(
                     text=(
-                        f"{palavra} ficou na posição "
-                        f"#{posicao} | Proximidade: "
-                        f"{proximidade}"
+                        f'"{palavra}" ficou em #{posicao}  •  '
+                        f'Proximidade: {proximidade}'
                     ),
-                    fg="#2563eb"
+                    fg=self.BLUE
                 )
 
         except Exception as erro:
 
             self.label_status.config(
                 text=f"Erro ao enviar tentativa: {erro}",
-                fg="#dc2626"
+                fg=self.RED
             )
 
         finally:
@@ -664,6 +1222,10 @@ class GameScreen(tk.Frame):
                 self.partida_ativa
             )
 
+            if self.partida_ativa:
+
+                self.campo_palavra.focus_set()
+
     # ==========================================================
     # HISTÓRICO
     # ==========================================================
@@ -678,16 +1240,19 @@ class GameScreen(tk.Frame):
 
             self.label_status.config(
                 text=f"Erro ao obter histórico: {erro}",
-                fg="#dc2626"
+                fg=self.RED
             )
 
             return
 
         # Limpa tabela
         for item in self.tabela.get_children():
-            self.tabela.delete(item)
 
-        # Adiciona histórico
+            self.tabela.delete(
+                item
+            )
+
+        # Preenche
         for indice, registro in enumerate(
             historico,
             start=1
@@ -711,15 +1276,17 @@ class GameScreen(tk.Frame):
                 )
             )
 
-            # Identifica se é tentativa ou dica
             tipo = registro.get(
                 "tipo",
                 "tentativa"
             )
 
             if tipo == "dica":
+
                 tag = "dica"
+
             else:
+
                 tag = "tentativa"
 
             self.tabela.insert(
@@ -728,11 +1295,46 @@ class GameScreen(tk.Frame):
                 values=(
                     indice,
                     palavra,
-                    posicao,
-                    proximidade
+                    (
+                        f"#{posicao}"
+                        if posicao != "-"
+                        else "-"
+                    ),
+                    self._formatar_proximidade(
+                        proximidade
+                    )
                 ),
                 tags=(tag,)
             )
+
+        # Scroll para o final
+        itens = self.tabela.get_children()
+
+        if itens:
+
+            self.tabela.see(
+                itens[-1]
+            )
+
+    # ==========================================================
+    # FORMATAR PROXIMIDADE
+    # ==========================================================
+
+    def _formatar_proximidade(
+        self,
+        valor
+    ):
+
+        try:
+
+            return f"{float(valor):.4f}"
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            return str(valor)
 
     # ==========================================================
     # DICA
@@ -757,8 +1359,12 @@ class GameScreen(tk.Frame):
             ):
 
                 dica = (
-                    resultado.get("dica")
-                    or resultado.get("palavra")
+                    resultado.get(
+                        "dica"
+                    )
+                    or resultado.get(
+                        "palavra"
+                    )
                     or resultado.get(
                         "mensagem",
                         "Dica recebida."
@@ -776,27 +1382,28 @@ class GameScreen(tk.Frame):
                     )
                 )
 
-                texto = f"💡 Dica: {dica}"
+                texto = (
+                    f"💡 Dica: {dica}"
+                )
 
                 if posicao is not None:
+
                     texto += (
-                        f" | Posição: #{posicao}"
+                        f"  •  #{posicao}"
                     )
 
                 if proximidade is not None:
+
                     texto += (
-                        f" | Proximidade: "
-                        f"{proximidade}"
+                        f"  •  "
+                        f"{self._formatar_proximidade(proximidade)}"
                     )
 
                 self.label_dica.config(
                     text=texto,
-                    fg="#7c3aed"
+                    fg=self.PURPLE
                 )
 
-                # IMPORTANTE:
-                # Atualiza o histórico para que
-                # a dica apareça na tabela.
                 self.atualizar_historico()
 
             else:
@@ -806,19 +1413,20 @@ class GameScreen(tk.Frame):
                         "mensagem",
                         "Não foi possível obter uma dica."
                     ),
-                    fg="#d97706"
+                    fg="#f59e0b"
                 )
 
         except Exception as erro:
 
             self.label_dica.config(
                 text=f"Erro ao solicitar dica: {erro}",
-                fg="#dc2626"
+                fg=self.RED
             )
 
         finally:
 
             if self.partida_ativa:
+
                 self.botao_dica.config(
                     state="normal"
                 )
@@ -833,8 +1441,8 @@ class GameScreen(tk.Frame):
             return
 
         confirmar = messagebox.askyesno(
-            "Desistir",
-            "Tem certeza que deseja desistir da partida?\n\n"
+            "Desistir da partida",
+            "Tem certeza que deseja desistir?\n\n"
             "A palavra secreta será revelada."
         )
 
@@ -859,7 +1467,7 @@ class GameScreen(tk.Frame):
                         "mensagem",
                         "Não foi possível desistir."
                     ),
-                    fg="#dc2626"
+                    fg=self.RED
                 )
 
                 return
@@ -871,7 +1479,6 @@ class GameScreen(tk.Frame):
                 "não informada"
             )
 
-            # Recebe as 30 palavras do servidor
             palavras_proximas = resultado.get(
                 "palavras_proximas",
                 []
@@ -879,16 +1486,14 @@ class GameScreen(tk.Frame):
 
             self.label_status.config(
                 text=(
-                    "Partida encerrada. "
-                    f"A palavra secreta era: {palavra}"
+                    f"A palavra secreta era: "
+                    f"{palavra}"
                 ),
-                fg="#dc2626"
+                fg=self.RED
             )
 
             self._finalizar_partida()
 
-            # Mostra janela com palavra secreta
-            # e as 30 palavras mais próximas
             self._mostrar_desistencia(
                 palavra,
                 palavras_proximas
@@ -898,7 +1503,7 @@ class GameScreen(tk.Frame):
 
             self.label_status.config(
                 text=f"Erro ao desistir: {erro}",
-                fg="#dc2626"
+                fg=self.RED
             )
 
         finally:
@@ -932,11 +1537,14 @@ class GameScreen(tk.Frame):
         if self._criando_partida:
             return
 
-        # Limpa tabela
+        # Limpa histórico
         for item in self.tabela.get_children():
-            self.tabela.delete(item)
 
-        # Limpa campo
+            self.tabela.delete(
+                item
+            )
+
+        # Limpa entrada
         self.campo_palavra.delete(
             0,
             tk.END
@@ -949,8 +1557,10 @@ class GameScreen(tk.Frame):
 
         self.label_status.config(
             text="Iniciando nova partida...",
-            fg="#6b7280"
+            fg=self.TEXT_MUTED
         )
+
+        self._limpar_cards()
 
         self._mostrar_botao_nova_partida(
             False
@@ -959,7 +1569,23 @@ class GameScreen(tk.Frame):
         self.iniciar_partida()
 
     # ==========================================================
-    # MOSTRAR/ESCONDER NOVA PARTIDA
+    # LIMPAR CARDS
+    # ==========================================================
+
+    def _limpar_cards(self):
+
+        self.label_posicao.config(
+            text="—",
+            fg=self.BLUE
+        )
+
+        self.label_proximidade.config(
+            text="—",
+            fg=self.PURPLE
+        )
+
+    # ==========================================================
+    # MOSTRAR NOVA PARTIDA
     # ==========================================================
 
     def _mostrar_botao_nova_partida(
@@ -972,7 +1598,7 @@ class GameScreen(tk.Frame):
             self.botao_nova_partida.pack(
                 side="left",
                 padx=5,
-                ipady=5,
+                ipady=7,
                 before=self.botao_menu
             )
 
@@ -981,7 +1607,7 @@ class GameScreen(tk.Frame):
             self.botao_nova_partida.pack_forget()
 
     # ==========================================================
-    # MENSAGEM DE VITÓRIA
+    # VITÓRIA
     # ==========================================================
 
     def _mostrar_vitoria(
@@ -990,7 +1616,7 @@ class GameScreen(tk.Frame):
     ):
 
         messagebox.showinfo(
-            "Parabéns!",
+            "🎉 Parabéns!",
             "Você encontrou a palavra secreta!\n\n"
             f"Palavra: {palavra}"
         )
@@ -1014,19 +1640,18 @@ class GameScreen(tk.Frame):
         )
 
         janela.geometry(
-            "700x650"
+            "780x680"
         )
 
         janela.minsize(
-            600,
-            500
+            650,
+            550
         )
 
         janela.configure(
-            bg="#f5f7fb"
+            bg=self.BG
         )
 
-        # Centraliza a janela
         janela.transient(
             self.winfo_toplevel()
         )
@@ -1037,86 +1662,75 @@ class GameScreen(tk.Frame):
         # CABEÇALHO
         # ======================================================
 
-        cabecalho = tk.Frame(
+        tk.Label(
             janela,
-            bg="#f5f7fb"
-        )
-
-        cabecalho.pack(
-            fill="x",
-            padx=30,
-            pady=(25, 15)
+            text="PARTIDA ENCERRADA",
+            font=("Arial", 11, "bold"),
+            bg=self.BG,
+            fg=self.PURPLE
+        ).pack(
+            pady=(25, 3)
         )
 
         tk.Label(
-            cabecalho,
-            text="Partida encerrada",
-            font=("Arial", 20, "bold"),
-            bg="#f5f7fb",
-            fg="#1f2937"
+            janela,
+            text="Você desistiu da partida",
+            font=("Arial", 22, "bold"),
+            bg=self.BG,
+            fg=self.WHITE
         ).pack()
 
-        tk.Label(
-            cabecalho,
-            text="Você desistiu da partida.",
-            font=("Arial", 11),
-            bg="#f5f7fb",
-            fg="#6b7280"
-        ).pack(
-            pady=(5, 0)
-        )
-
         # ======================================================
-        # PALAVRA SECRETA
+        # PALAVRA
         # ======================================================
 
-        quadro_secreto = tk.Frame(
+        quadro = tk.Frame(
             janela,
-            bg="#fee2e2",
-            bd=1,
-            relief="solid"
+            bg="#351827",
+            highlightbackground="#7f1d1d",
+            highlightthickness=1
         )
 
-        quadro_secreto.pack(
+        quadro.pack(
             fill="x",
-            padx=30,
+            padx=35,
+            pady=20
+        )
+
+        tk.Label(
+            quadro,
+            text="A PALAVRA SECRETA ERA",
+            font=("Arial", 9, "bold"),
+            bg="#351827",
+            fg="#fca5a5"
+        ).pack(
+            pady=(15, 4)
+        )
+
+        tk.Label(
+            quadro,
+            text=str(palavra).upper(),
+            font=("Arial", 28, "bold"),
+            bg="#351827",
+            fg="#f87171"
+        ).pack(
             pady=(0, 15)
         )
 
-        tk.Label(
-            quadro_secreto,
-            text="A palavra secreta era:",
-            font=("Arial", 11, "bold"),
-            bg="#fee2e2",
-            fg="#991b1b"
-        ).pack(
-            pady=(12, 2)
-        )
-
-        tk.Label(
-            quadro_secreto,
-            text=str(palavra),
-            font=("Arial", 22, "bold"),
-            bg="#fee2e2",
-            fg="#dc2626"
-        ).pack(
-            pady=(0, 12)
-        )
-
         # ======================================================
-        # TÍTULO DO RANKING
+        # TÍTULO
         # ======================================================
 
         tk.Label(
             janela,
             text="30 palavras mais próximas",
-            font=("Arial", 13, "bold"),
-            bg="#f5f7fb",
-            fg="#374151"
+            font=("Arial", 14, "bold"),
+            bg=self.BG,
+            fg=self.WHITE
         ).pack(
             anchor="w",
-            padx=30,
-            pady=(5, 8)
+            padx=35,
+            pady=(0, 10)
         )
 
         # ======================================================
@@ -1125,15 +1739,15 @@ class GameScreen(tk.Frame):
 
         quadro_tabela = tk.Frame(
             janela,
-            bg="#ffffff",
-            bd=1,
-            relief="solid"
+            bg=self.PANEL,
+            highlightbackground=self.BORDER,
+            highlightthickness=1
         )
 
         quadro_tabela.pack(
             fill="both",
             expand=True,
-            padx=30,
+            padx=35,
             pady=(0, 15)
         )
 
@@ -1151,22 +1765,22 @@ class GameScreen(tk.Frame):
 
         tabela.heading(
             "posicao",
-            text="Posição"
+            text="POSIÇÃO"
         )
 
         tabela.heading(
             "palavra",
-            text="Palavra"
+            text="PALAVRA"
         )
 
         tabela.heading(
             "proximidade",
-            text="Proximidade"
+            text="PROXIMIDADE"
         )
 
         tabela.column(
             "posicao",
-            width=100,
+            width=120,
             anchor="center"
         )
 
@@ -1203,53 +1817,60 @@ class GameScreen(tk.Frame):
             fill="y"
         )
 
-        # ======================================================
-        # PREENCHER AS 30 PALAVRAS
-        # ======================================================
+        # ------------------------------------------------------
+        # Dados
+        # ------------------------------------------------------
 
         for item in palavras_proximas:
+
+            posicao = item.get(
+                "posicao",
+                "-"
+            )
+
+            proximidade = item.get(
+                "proximidade",
+                item.get(
+                    "similaridade",
+                    "-"
+                )
+            )
 
             tabela.insert(
                 "",
                 "end",
                 values=(
-                    item.get(
-                        "posicao",
-                        "-"
-                    ),
+                    f"#{posicao}",
                     item.get(
                         "palavra",
                         ""
                     ),
-                    item.get(
-                        "proximidade",
-                        item.get(
-                            "similaridade",
-                            "-"
-                        )
+                    self._formatar_proximidade(
+                        proximidade
                     )
                 )
             )
 
         # ======================================================
-        # BOTÃO FECHAR
+        # BOTÃO
         # ======================================================
 
         tk.Button(
             janela,
-            text="Fechar",
+            text="FECHAR",
             width=15,
             font=("Arial", 10, "bold"),
-            bg="#374151",
-            fg="white",
-            activebackground="#1f2937",
-            activeforeground="white",
+            bg=self.PANEL_LIGHT,
+            fg=self.WHITE,
+            activebackground=self.BORDER,
+            activeforeground=self.WHITE,
             relief="flat",
+            bd=0,
             cursor="hand2",
             command=janela.destroy
         ).pack(
             pady=(0, 20),
-            ipady=5
+            ipady=7
         )
 
     # ==========================================================
@@ -1289,6 +1910,18 @@ class GameScreen(tk.Frame):
 
     def voltar_menu(self):
 
+        # Sai da tela cheia antes de voltar
+        try:
+
+            self.winfo_toplevel().attributes(
+                "-fullscreen",
+                False
+            )
+
+        except tk.TclError:
+
+            pass
+
         from client.ui.menu import Menu
 
         self.screen_manager.show(
@@ -1296,12 +1929,19 @@ class GameScreen(tk.Frame):
         )
 
     # ==========================================================
-    # DESTRUIR TELA
+    # DESTRUIR
     # ==========================================================
 
     def destroy(self):
 
-        # Evita callbacks pendentes
-        # interagindo com widgets destruídos.
+        try:
+
+            self.winfo_toplevel().unbind(
+                "<Escape>"
+            )
+
+        except tk.TclError:
+
+            pass
 
         super().destroy()
