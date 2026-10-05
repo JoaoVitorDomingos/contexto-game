@@ -158,6 +158,34 @@ class SemanticModel:
         )
 
     # ==========================================================
+    # PROXIMIDADE PARA EXIBIÇÃO
+    # ==========================================================
+
+    def calcular_proximidade(self, similaridade):
+        """
+        Converte a similaridade de cosseno em uma
+        proximidade de 0 a 100 para exibição na interface.
+
+        A similaridade original continua sendo utilizada
+        internamente para o ranking.
+
+        Valores negativos são apresentados como 0.
+        """
+
+        if similaridade is None:
+            return 0.0
+
+        proximidade = max(
+            0.0,
+            min(1.0, float(similaridade))
+        )
+
+        return round(
+            proximidade * 100,
+            2
+        )
+
+    # ==========================================================
     # RANKING
     # ==========================================================
 
@@ -230,16 +258,6 @@ class SemanticModel:
             # ==================================================
             # EVITAR VETORES IDENTICOS À SECRETA
             # ==================================================
-            #
-            # O modelo pt_core_news_md pode possuir várias
-            # palavras apontando para o mesmo vetor.
-            #
-            # Nesse caso a similaridade fica exatamente 1.0.
-            #
-            # Não vamos considerar essas palavras como
-            # verdadeiras "palavras próximas", pois elas
-            # possuem exatamente a mesma representação vetorial.
-            # ==================================================
 
             if similaridade >= 0.999999:
 
@@ -279,7 +297,13 @@ class SemanticModel:
 
                 "posicao": posicao,
 
+                # Valor original utilizado pelo algoritmo
                 "similaridade": float(
+                    similaridade
+                ),
+
+                # Valor amigável para a interface
+                "proximidade": self.calcular_proximidade(
                     similaridade
                 )
             }
@@ -305,7 +329,10 @@ class SemanticModel:
             print(
                 f"#{dados['posicao']:4d} "
                 f"{palavra:<20} "
-                f"{dados['similaridade']:.6f}"
+                f"similaridade="
+                f"{dados['similaridade']:.6f} "
+                f"proximidade="
+                f"{dados['proximidade']:.2f}%"
             )
 
         print("=" * 60)
