@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import threading
 
 from client.network.rpc_client import RPCClient
+from client.ui.loading_spinner import LoadingSpinner
 from shared.constants import NOME_DO_JOGO
-
 
 class GameScreen(tk.Frame):
     """
@@ -54,9 +55,13 @@ class GameScreen(tk.Frame):
         self.partida_ativa = False
         self._criando_partida = False
 
+        self._enviando_tentativa = False
+        self._processando_acao = False
+
         self.tela_cheia = False
 
         self.criar_interface()
+        self.criar_loading_partida()
 
         # Tela cheia depois que a janela estiver pronta
         self.after(
@@ -461,6 +466,12 @@ class GameScreen(tk.Frame):
             side="left",
             padx=(12, 0),
             ipady=10
+        )
+
+        self.loading_spinner = LoadingSpinner(
+            self.botao_enviar,
+            "ENVIAR  →",
+            "ENVIANDO..."
         )
 
     # ==========================================================
@@ -886,6 +897,12 @@ class GameScreen(tk.Frame):
             ipady=7
         )
 
+        self.spinner_dica = LoadingSpinner(
+            self.botao_dica,
+            "💡  DICA",
+            "BUSCANDO..."
+        )
+
         # ------------------------------------------------------
         # DESISTIR
         # ------------------------------------------------------
@@ -909,6 +926,12 @@ class GameScreen(tk.Frame):
             side="left",
             padx=5,
             ipady=7
+        )
+
+        self.spinner_desistir = LoadingSpinner(
+            self.botao_desistir,
+            "🏳  DESISTIR",
+            "ENCERRANDO..."
         )
 
         # ------------------------------------------------------
@@ -967,11 +990,30 @@ class GameScreen(tk.Frame):
             return
 
         self._criando_partida = True
+        self.partida_ativa = False
+
+        self._atualizar_estado_botoes(
+            False
+        )
+
+        self._mostrar_loading_partida(
+            True
+        )
 
         self.label_status_conexao.config(
             text="●  Conectando...",
             fg="#f59e0b"
         )
+
+        thread = threading.Thread(
+            target=self._processar_inicio_partida,
+            daemon=True
+        )
+
+        thread.start()
+
+    def _processar_inicio_partida(self):
+        """Executa a conexão e a criação da partida fora da UI."""
 
         try:
 
@@ -980,11 +1022,6 @@ class GameScreen(tk.Frame):
                 raise ConnectionError(
                     "Não foi possível conectar ao servidor."
                 )
-
-            self.label_status_conexao.config(
-                text="●  Servidor conectado",
-                fg=self.GREEN
-            )
 
             resultado = self.rpc.iniciar_partida()
 
@@ -1000,65 +1037,116 @@ class GameScreen(tk.Frame):
                     )
                 )
 
-            self.partida_ativa = True
+            historico = self.rpc.obter_historico()
 
-            self.label_status.config(
-                text="Partida iniciada. Boa sorte!",
-                fg=self.GREEN
+            self.after(
+                0,
+                self._finalizar_inicio_partida,
+                resultado,
+                historico,
+                None
             )
-
-            self.label_dica.config(
-                text=""
-            )
-
-            self._mostrar_botao_nova_partida(
-                False
-            )
-
-            self._atualizar_estado_botoes(
-                True
-            )
-
-            self._limpar_cards()
-
-            self.campo_palavra.focus_set()
-
-            self.atualizar_historico()
 
         except Exception as erro:
 
-            self.partida_ativa = False
-
-            self._atualizar_estado_botoes(
-                False
+            self.after(
+                0,
+                self._finalizar_inicio_partida,
+                None,
+                None,
+                erro
             )
-
-            self.label_status_conexao.config(
-                text="●  Servidor indisponível",
-                fg=self.RED
-            )
-
-            self.label_status.config(
-                text=str(erro),
-                fg=self.RED
-            )
-
-            messagebox.showerror(
-                "Erro de conexão",
-                "Não foi possível iniciar a partida.\n\n"
-                f"Detalhes: {erro}\n\n"
-                "Verifique se o servidor está em execução."
-            )
-
-        finally:
-
-            self._criando_partida = False
-
+    
     # ==========================================================
     # ENVIAR TENTATIVA
     # ==========================================================
 
+    def criar_loading_partida(self):
+
+        self.loading_partida_frame = tk.Frame(
+            self,
+            bg=self.BG_DARK
+        )
+
+        self.loading_partida_frame.place(
+            relx=0,
+            rely=0,
+            relwidth=1,
+            relheight=1
+        )
+
+        conteudo = tk.Frame(
+            self.loading_partida_frame,
+            bg=self.BG_DARK
+        )
+
+        conteudo.place(
+            relx=0.5,
+            rely=0.5,
+            anchor="center"
+        )
+
+        tk.Label(
+            conteudo,
+            text=NOME_DO_JOGO,
+            font=("Arial", 32, "bold"),
+            bg=self.BG_DARK,
+            fg=self.WHITE
+        ).pack(
+            pady=(0, 15)
+        )
+
+        self.label_loading_partida = tk.Label(
+            conteudo,
+            text="◐ INICIANDO...",
+            font=("Arial", 18, "bold"),
+            bg=self.BG_DARK,
+            fg=self.PURPLE
+        )
+
+        self.label_loading_partida.pack(
+            pady=8
+        )
+
+        tk.Label(
+            conteudo,
+            text="Preparando uma nova partida...",
+            font=("Arial", 11),
+            bg=self.BG_DARK,
+            fg=self.TEXT_MUTED
+        ).pack()
+
+        self.spinner_partida = LoadingSpinner(
+            self.label_loading_partida,
+            "◐ INICIANDO...",
+            "INICIANDO..."
+        )
+    
+    def _mostrar_loading_partida(self, mostrar):
+
+        if mostrar:
+
+            self.loading_partida_frame.place(
+                relx=0,
+                rely=0,
+                relwidth=1,
+                relheight=1
+            )
+
+            self.loading_partida_frame.lift()
+
+            self.spinner_partida.start()
+
+        else:
+
+            self.spinner_partida.stop()
+
+            self.loading_partida_frame.place_forget()
+    
     def enviar_tentativa(self):
+
+        if self._enviando_tentativa:
+            return
 
         if not self.partida_ativa:
 
@@ -1082,15 +1170,98 @@ class GameScreen(tk.Frame):
 
             return
 
+        self._enviando_tentativa = True
+
+        self.campo_palavra.config(
+            state="disabled"
+        )
+
         self.botao_enviar.config(
             state="disabled"
         )
+
+        self.botao_dica.config(
+            state="disabled"
+        )
+
+        self.botao_desistir.config(
+            state="disabled"
+        )
+
+        self.label_status.config(
+            text="Enviando tentativa...",
+            fg=self.TEXT_MUTED
+        )
+
+        self.loading_spinner.start()
+
+        thread = threading.Thread(
+            target=self._processar_tentativa,
+            args=(palavra,),
+            daemon=True
+        )
+
+        thread.start()
+
+    def _processar_tentativa(self, palavra):
+        """
+        Executa a chamada RPC fora da thread principal
+        do Tkinter.
+        """
 
         try:
 
             resultado = self.rpc.tentar_palavra(
                 palavra
             )
+
+            self.after(
+                0,
+                self._finalizar_tentativa,
+                palavra,
+                resultado,
+                None
+            )
+
+        except Exception as erro:
+
+            self.after(
+                0,
+                self._finalizar_tentativa,
+                palavra,
+                None,
+                erro
+            )
+
+    def _finalizar_tentativa(
+        self,
+        palavra,
+        resultado,
+        erro
+    ):
+        """
+        Atualiza a interface após a resposta
+        do servidor.
+        """
+
+        self.loading_spinner.stop()
+
+        self._enviando_tentativa = False
+
+        if erro is not None:
+
+            self.label_status.config(
+                text=f"Erro ao enviar tentativa: {erro}",
+                fg=self.RED
+            )
+
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
+
+            return
+
+        try:
 
             if not resultado.get(
                 "sucesso",
@@ -1103,6 +1274,10 @@ class GameScreen(tk.Frame):
                         "Tentativa recusada."
                     ),
                     fg="#f59e0b"
+                )
+
+                self._atualizar_estado_botoes(
+                    self.partida_ativa
                 )
 
                 return
@@ -1134,7 +1309,6 @@ class GameScreen(tk.Frame):
 
             self.partida_ativa = not acertou
 
-            # Atualiza cards
             if posicao != "-":
 
                 self.label_posicao.config(
@@ -1158,16 +1332,10 @@ class GameScreen(tk.Frame):
                         text=str(proximidade)
                     )
 
-            # --------------------------------------------------
-            # ACERTOU
-            # --------------------------------------------------
-
             if acertou:
 
                 self.label_status.config(
-                    text=(
-                        "🎉 Você encontrou a palavra secreta!"
-                    ),
+                    text="🎉 Você encontrou a palavra secreta!",
                     fg=self.GREEN
                 )
 
@@ -1187,10 +1355,6 @@ class GameScreen(tk.Frame):
 
                 self._finalizar_partida()
 
-            # --------------------------------------------------
-            # ERRO
-            # --------------------------------------------------
-
             else:
 
                 self.label_status.config(
@@ -1201,23 +1365,6 @@ class GameScreen(tk.Frame):
                     fg=self.BLUE
                 )
 
-        except Exception as erro:
-
-            self.label_status.config(
-                text=f"Erro ao enviar tentativa: {erro}",
-                fg=self.RED
-            )
-
-        finally:
-
-            self.botao_enviar.config(
-                state=(
-                    "normal"
-                    if self.partida_ativa
-                    else "disabled"
-                )
-            )
-
             self._atualizar_estado_botoes(
                 self.partida_ativa
             )
@@ -1225,6 +1372,89 @@ class GameScreen(tk.Frame):
             if self.partida_ativa:
 
                 self.campo_palavra.focus_set()
+
+        except Exception as erro:
+
+            self.label_status.config(
+                text=f"Erro ao processar resposta: {erro}",
+                fg=self.RED
+            )
+
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
+
+    def _finalizar_inicio_partida(
+        self,
+        resultado,
+        historico,
+        erro
+    ):
+
+        self._mostrar_loading_partida(
+            False
+        )
+
+        self._criando_partida = False
+
+        if erro is not None:
+
+            self.partida_ativa = False
+
+            self._atualizar_estado_botoes(
+                False
+            )
+
+            self.label_status_conexao.config(
+                text="●  Servidor indisponível",
+                fg=self.RED
+            )
+
+            self.label_status.config(
+                text=str(erro),
+                fg=self.RED
+            )
+
+            messagebox.showerror(
+                "Erro de conexão",
+                "Não foi possível iniciar a partida.\n\n"
+                f"Detalhes: {erro}\n\n"
+                "Verifique se o servidor está em execução."
+            )
+
+            return
+
+        self.label_status_conexao.config(
+            text="●  Servidor conectado",
+            fg=self.GREEN
+        )
+
+        self.partida_ativa = True
+
+        self.label_status.config(
+            text="Partida iniciada. Boa sorte!",
+            fg=self.GREEN
+        )
+
+        self.label_dica.config(
+            text=""
+        )
+
+        self._mostrar_botao_nova_partida(
+            False
+        )
+
+        self._atualizar_estado_botoes(
+            True
+        )
+
+        self._limpar_cards()
+
+        self._preencher_historico(
+            historico
+        )
+
+        self.campo_palavra.focus_set()
 
     # ==========================================================
     # HISTÓRICO
@@ -1342,94 +1572,144 @@ class GameScreen(tk.Frame):
 
     def solicitar_dica(self):
 
-        if not self.partida_ativa:
+        if (
+            not self.partida_ativa
+            or self._processando_acao
+        ):
             return
 
-        self.botao_dica.config(
-            state="disabled"
+        self._processando_acao = True
+
+        self._atualizar_estado_botoes(
+            False
         )
+
+        self.spinner_dica.start()
+
+        thread = threading.Thread(
+            target=self._processar_dica,
+            daemon=True
+        )
+
+        thread.start()
+
+    def _processar_dica(self):
 
         try:
 
             resultado = self.rpc.solicitar_dica()
 
-            if resultado.get(
-                "sucesso",
-                False
-            ):
-
-                dica = (
-                    resultado.get(
-                        "dica"
-                    )
-                    or resultado.get(
-                        "palavra"
-                    )
-                    or resultado.get(
-                        "mensagem",
-                        "Dica recebida."
-                    )
-                )
-
-                posicao = resultado.get(
-                    "posicao"
-                )
-
-                proximidade = resultado.get(
-                    "proximidade",
-                    resultado.get(
-                        "similaridade"
-                    )
-                )
-
-                texto = (
-                    f"💡 Dica: {dica}"
-                )
-
-                if posicao is not None:
-
-                    texto += (
-                        f"  •  #{posicao}"
-                    )
-
-                if proximidade is not None:
-
-                    texto += (
-                        f"  •  "
-                        f"{self._formatar_proximidade(proximidade)}"
-                    )
-
-                self.label_dica.config(
-                    text=texto,
-                    fg=self.PURPLE
-                )
-
-                self.atualizar_historico()
-
-            else:
-
-                self.label_dica.config(
-                    text=resultado.get(
-                        "mensagem",
-                        "Não foi possível obter uma dica."
-                    ),
-                    fg="#f59e0b"
-                )
+            self.after(
+                0,
+                self._finalizar_dica,
+                resultado,
+                None
+            )
 
         except Exception as erro:
+
+            self.after(
+                0,
+                self._finalizar_dica,
+                None,
+                erro
+            )
+
+    def _finalizar_dica(
+        self,
+        resultado,
+        erro
+    ):
+
+        self.spinner_dica.stop()
+
+        self._processando_acao = False
+
+        if erro is not None:
 
             self.label_dica.config(
                 text=f"Erro ao solicitar dica: {erro}",
                 fg=self.RED
             )
 
-        finally:
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
 
-            if self.partida_ativa:
+            return
 
-                self.botao_dica.config(
-                    state="normal"
+        if resultado is None:
+
+            self.label_dica.config(
+                text="Não foi possível obter uma dica.",
+                fg="#f59e0b"
+            )
+
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
+
+            return
+
+        if resultado.get(
+            "sucesso",
+            False
+        ):
+
+            dica = (
+                resultado.get("dica")
+                or resultado.get("palavra")
+                or resultado.get(
+                    "mensagem",
+                    "Dica recebida."
                 )
+            )
+
+            posicao = resultado.get(
+                "posicao"
+            )
+
+            proximidade = resultado.get(
+                "proximidade",
+                resultado.get(
+                    "similaridade"
+                )
+            )
+
+            texto = f"💡 Dica: {dica}"
+
+            if posicao is not None:
+
+                texto += f"  •  #{posicao}"
+
+            if proximidade is not None:
+
+                texto += (
+                    f"  •  "
+                    f"{self._formatar_proximidade(proximidade)}"
+                )
+
+            self.label_dica.config(
+                text=texto,
+                fg=self.PURPLE
+            )
+
+            # Atualiza o histórico diretamente do servidor.
+            self.atualizar_historico()
+
+        else:
+
+            self.label_dica.config(
+                text=resultado.get(
+                    "mensagem",
+                    "Não foi possível obter uma dica."
+                ),
+                fg="#f59e0b"
+            )
+
+        self._atualizar_estado_botoes(
+            self.partida_ativa
+        )
 
     # ==========================================================
     # DESISTIR
@@ -1437,7 +1717,10 @@ class GameScreen(tk.Frame):
 
     def desistir(self):
 
-        if not self.partida_ativa:
+        if (
+            not self.partida_ativa
+            or self._processando_acao
+        ):
             return
 
         confirmar = messagebox.askyesno(
@@ -1449,68 +1732,108 @@ class GameScreen(tk.Frame):
         if not confirmar:
             return
 
-        self.botao_desistir.config(
-            state="disabled"
+        self._processando_acao = True
+
+        self._atualizar_estado_botoes(
+            False
         )
+
+        self.spinner_desistir.start()
+
+        thread = threading.Thread(
+            target=self._processar_desistencia,
+            daemon=True
+        )
+
+        thread.start()
+
+    def _processar_desistencia(self):
 
         try:
 
             resultado = self.rpc.desistir()
 
-            if not resultado.get(
-                "sucesso",
-                False
-            ):
-
-                self.label_status.config(
-                    text=resultado.get(
-                        "mensagem",
-                        "Não foi possível desistir."
-                    ),
-                    fg=self.RED
-                )
-
-                return
-
-            self.partida_ativa = False
-
-            palavra = resultado.get(
-                "palavra_secreta",
-                "não informada"
-            )
-
-            palavras_proximas = resultado.get(
-                "palavras_proximas",
-                []
-            )
-
-            self.label_status.config(
-                text=(
-                    f"A palavra secreta era: "
-                    f"{palavra}"
-                ),
-                fg=self.RED
-            )
-
-            self._finalizar_partida()
-
-            self._mostrar_desistencia(
-                palavra,
-                palavras_proximas
+            self.after(
+                0,
+                self._finalizar_desistencia,
+                resultado,
+                None
             )
 
         except Exception as erro:
+
+            self.after(
+                0,
+                self._finalizar_desistencia,
+                None,
+                erro
+            )
+
+    def _finalizar_desistencia(
+        self,
+        resultado,
+        erro
+    ):
+
+        self.spinner_desistir.stop()
+
+        self._processando_acao = False
+
+        if erro is not None:
 
             self.label_status.config(
                 text=f"Erro ao desistir: {erro}",
                 fg=self.RED
             )
 
-        finally:
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
+
+            return
+
+        if not resultado.get(
+            "sucesso",
+            False
+        ):
+
+            self.label_status.config(
+                text=resultado.get(
+                    "mensagem",
+                    "Não foi possível desistir."
+                ),
+                fg=self.RED
+            )
 
             self._atualizar_estado_botoes(
                 self.partida_ativa
             )
+
+            return
+
+        self.partida_ativa = False
+
+        palavra = resultado.get(
+            "palavra_secreta",
+            "não informada"
+        )
+
+        palavras_proximas = resultado.get(
+            "palavras_proximas",
+            []
+        )
+
+        self.label_status.config(
+            text=f"A palavra secreta era: {palavra}",
+            fg=self.RED
+        )
+
+        self._finalizar_partida()
+
+        self._mostrar_desistencia(
+            palavra,
+            palavras_proximas
+        )
 
     # ==========================================================
     # FINALIZAR PARTIDA
