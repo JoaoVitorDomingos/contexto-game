@@ -290,7 +290,7 @@ class SemanticModel:
             similaridade
         ) in enumerate(
             scores,
-            start=1
+            start=2
         ):
 
             ranking[palavra] = {
