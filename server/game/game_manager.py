@@ -9,6 +9,7 @@ from server.ia.semantic_model import SemanticModel
 class GameManager:
 
     def __init__(self):
+
         self.palavra_secreta = None
 
         self.tentativas = []
@@ -21,6 +22,30 @@ class GameManager:
 
         self.semantic_model = None
 
+        # ========================================================
+        # CACHE DOS RANKINGS
+        # ========================================================
+        #
+        # Guarda o ranking já calculado para cada palavra secreta.
+        #
+        # Exemplo:
+        #
+        # {
+        #     "casa": {...},
+        #     "janela": {...},
+        #     "vidro": {...}
+        # }
+        #
+        # Assim, se uma palavra for sorteada novamente,
+        # não precisamos recalcular seu ranking.
+        # ========================================================
+
+        self._cache_rankings = {}
+
+        # ========================================================
+        # CARREGA A IA UMA ÚNICA VEZ
+        # ========================================================
+
         self._carregar_ia()
 
     # ============================================================
@@ -29,9 +54,10 @@ class GameManager:
 
     def _carregar_ia(self):
 
-        print("\n================================")
+        print()
+        print("=" * 60)
         print("CARREGANDO IA")
-        print("================================")
+        print("=" * 60)
 
         # --------------------------------------------------------
         # Carrega o livro
@@ -106,9 +132,10 @@ class GameManager:
             f"{len(self.vocabulario)} palavras"
         )
 
-        print("================================")
+        print("=" * 60)
         print("IA CARREGADA")
-        print("================================\n")
+        print("=" * 60)
+        print()
 
     # ============================================================
     # INICIAR PARTIDA
@@ -130,23 +157,59 @@ class GameManager:
             self.vocabulario
         )
 
+        print()
         print(
-            f"\n[PARTIDA] Palavra secreta: "
+            f"[PARTIDA] Palavra secreta: "
             f"{self.palavra_secreta}"
         )
 
-        # --------------------------------------------------------
-        # Cria o ranking da palavra secreta
-        # --------------------------------------------------------
+        # ========================================================
+        # VERIFICA O CACHE
+        # ========================================================
 
-        self.ranking = (
-            self.semantic_model.build_ranking(
-                self.palavra_secreta
+        if self.palavra_secreta in self._cache_rankings:
+
+            print(
+                "[PARTIDA] Ranking encontrado no cache."
             )
-        )
+
+            self.ranking = self._cache_rankings[
+                self.palavra_secreta
+            ]
+
+        else:
+
+            print(
+                "[PARTIDA] Calculando ranking..."
+            )
+
+            # ----------------------------------------------------
+            # Calcula o ranking somente na primeira vez
+            # ----------------------------------------------------
+
+            ranking = (
+                self.semantic_model.build_ranking(
+                    self.palavra_secreta
+                )
+            )
+
+            # ----------------------------------------------------
+            # Guarda no cache
+            # ----------------------------------------------------
+
+            self._cache_rankings[
+                self.palavra_secreta
+            ] = ranking
+
+            self.ranking = ranking
+
+            print(
+                "[PARTIDA] Ranking calculado e "
+                "armazenado no cache."
+            )
 
         # --------------------------------------------------------
-        # Limpa dados da partida anterior
+        # Limpa os dados da partida anterior
         # --------------------------------------------------------
 
         self.tentativas = []
@@ -155,7 +218,7 @@ class GameManager:
         self.partida_ativa = True
 
         print(
-            f"[PARTIDA] Ranking criado com "
+            f"[PARTIDA] Ranking disponível com "
             f"{len(self.ranking)} palavras."
         )
 
@@ -267,8 +330,52 @@ class GameManager:
                 )
             }
 
-        posicao = dados["posicao"]
-        similaridade = dados["similaridade"]
+        # --------------------------------------------------------
+        # Pega os valores calculados pela IA
+        # --------------------------------------------------------
+
+        posicao = dados.get(
+            "posicao"
+        )
+
+        similaridade = dados.get(
+            "similaridade"
+        )
+
+        proximidade = dados.get(
+            "proximidade"
+        )
+
+        # --------------------------------------------------------
+        # SEGURANÇA:
+        # proximidade precisa ser ESTRITAMENTE positiva.
+        #
+        # Valores como:
+        #
+        # -0.0011
+        # -0.00001
+        # 0
+        #
+        # não podem entrar no jogo.
+        # --------------------------------------------------------
+
+        if proximidade is None:
+            return {
+                "sucesso": False,
+                "mensagem": (
+                    "A palavra não possui uma "
+                    "proximidade semântica válida."
+                )
+            }
+
+        if float(proximidade) <= 0:
+            return {
+                "sucesso": False,
+                "mensagem": (
+                    "A palavra possui similaridade "
+                    "semântica não positiva."
+                )
+            }
 
         # --------------------------------------------------------
         # Registra tentativa
@@ -278,12 +385,8 @@ class GameManager:
             "ordem": len(self.historico) + 1,
             "palavra": palavra,
             "posicao": posicao,
-            "similaridade": float(
-                similaridade
-            ),
-            "proximidade": float(
-                similaridade
-            ),
+            "similaridade": float(similaridade),
+            "proximidade": float(proximidade),
             "tipo": "tentativa"
         }
 
@@ -300,12 +403,8 @@ class GameManager:
             "acertou": False,
             "palavra": palavra,
             "posicao": posicao,
-            "proximidade": float(
-                similaridade
-            ),
-            "similaridade": float(
-                similaridade
-            ),
+            "proximidade": float(proximidade),
+            "similaridade": float(similaridade),
             "mensagem": "Tentativa registrada."
         }
 
@@ -344,18 +443,6 @@ class GameManager:
 
         # --------------------------------------------------------
         # Descobre a melhor posição alcançada
-        #
-        # Quanto MENOR o número, mais próxima está a palavra.
-        #
-        # Exemplo:
-        #
-        # tentativa = 2000
-        # dica      = 1800
-        # tentativa = 2500
-        #
-        # melhor posição = 1800
-        #
-        # A próxima dica precisa ser < 1800.
         # --------------------------------------------------------
 
         posicoes_validas = []
@@ -406,13 +493,7 @@ class GameManager:
 
             # ----------------------------------------------------
             # Primeira dica:
-            #
-            # Não entrega imediatamente uma palavra do topo.
-            #
-            # Exemplo:
-            # 5000 palavras
-            #
-            # primeira dica aproximadamente na região de 1000.
+            # aproximadamente na região de 1/5 do ranking.
             # ----------------------------------------------------
 
             inicio = max(
@@ -444,6 +525,20 @@ class GameManager:
                 if palavra in palavras_usadas:
                     continue
 
+                # ------------------------------------------------
+                # Só aceita proximidade positiva
+                # ------------------------------------------------
+
+                proximidade = dados.get(
+                    "proximidade"
+                )
+
+                if proximidade is None:
+                    continue
+
+                if float(proximidade) <= 0:
+                    continue
+
                 if inicio <= posicao <= fim:
 
                     candidatos.append(
@@ -458,16 +553,6 @@ class GameManager:
 
             # ----------------------------------------------------
             # A nova dica precisa obrigatoriamente ser melhor.
-            #
-            # Exemplo:
-            #
-            # melhor posição = 2000
-            #
-            # próxima dica:
-            # 1999, 1900, 1800...
-            #
-            # Nunca:
-            # 2001, 2200...
             # ----------------------------------------------------
 
             limite_superior = (
@@ -486,18 +571,6 @@ class GameManager:
 
             # ----------------------------------------------------
             # Define uma faixa próxima da posição atual.
-            #
-            # Exemplo:
-            #
-            # melhor = 2000
-            #
-            # candidatos:
-            # 1900 até 1999
-            #
-            # Se escolher 1940:
-            #
-            # próxima faixa:
-            # 1840 até 1939
             # ----------------------------------------------------
 
             intervalo = max(
@@ -528,6 +601,20 @@ class GameManager:
 
                 # Precisa ser melhor que a melhor posição
                 if posicao >= melhor_posicao:
+                    continue
+
+                # ------------------------------------------------
+                # Só aceita proximidade positiva
+                # ------------------------------------------------
+
+                proximidade = dados.get(
+                    "proximidade"
+                )
+
+                if proximidade is None:
+                    continue
+
+                if float(proximidade) <= 0:
                     continue
 
                 if inicio <= posicao <= fim:
@@ -562,6 +649,16 @@ class GameManager:
                     if posicao >= melhor_posicao:
                         continue
 
+                    proximidade = dados.get(
+                        "proximidade"
+                    )
+
+                    if proximidade is None:
+                        continue
+
+                    if float(proximidade) <= 0:
+                        continue
+
                     candidatos.append(
                         (palavra, dados)
                     )
@@ -579,6 +676,16 @@ class GameManager:
                         continue
 
                     if palavra in palavras_usadas:
+                        continue
+
+                    proximidade = dados.get(
+                        "proximidade"
+                    )
+
+                    if proximidade is None:
+                        continue
+
+                    if float(proximidade) <= 0:
                         continue
 
                     candidatos.append(
@@ -608,7 +715,28 @@ class GameManager:
         )
 
         posicao = dados["posicao"]
-        similaridade = dados["similaridade"]
+
+        similaridade = dados.get(
+            "similaridade"
+        )
+
+        proximidade = dados.get(
+            "proximidade"
+        )
+
+        # --------------------------------------------------------
+        # Segurança final
+        # --------------------------------------------------------
+
+        if proximidade is None or float(proximidade) <= 0:
+
+            return {
+                "sucesso": False,
+                "mensagem": (
+                    "A dica selecionada não possui "
+                    "proximidade positiva."
+                )
+            }
 
         # ========================================================
         # REGISTRA DICA NO HISTÓRICO
@@ -618,12 +746,8 @@ class GameManager:
             "ordem": len(self.historico) + 1,
             "palavra": palavra,
             "posicao": posicao,
-            "similaridade": float(
-                similaridade
-            ),
-            "proximidade": float(
-                similaridade
-            ),
+            "similaridade": float(similaridade),
+            "proximidade": float(proximidade),
             "tipo": "dica"
         }
 
@@ -634,8 +758,7 @@ class GameManager:
         print(
             f"[DICA] {palavra} "
             f"| posição: {posicao} "
-            f"| proximidade: "
-            f"{similaridade:.6f}"
+            f"| proximidade: {float(proximidade):.10f}"
         )
 
         # ========================================================
@@ -646,12 +769,8 @@ class GameManager:
             "sucesso": True,
             "palavra": palavra,
             "posicao": posicao,
-            "proximidade": float(
-                similaridade
-            ),
-            "similaridade": float(
-                similaridade
-            ),
+            "proximidade": float(proximidade),
+            "similaridade": float(similaridade),
             "mensagem": "Dica encontrada."
         }
 
@@ -697,6 +816,25 @@ class GameManager:
 
         for palavra, dados in ranking_ordenado[:30]:
 
+            proximidade = dados.get(
+                "proximidade"
+            )
+
+            similaridade = dados.get(
+                "similaridade"
+            )
+
+            # ----------------------------------------------------
+            # Segurança:
+            # não retorna palavras com proximidade <= 0.
+            # ----------------------------------------------------
+
+            if proximidade is None:
+                continue
+
+            if float(proximidade) <= 0:
+                continue
+
             palavras_proximas.append({
 
                 "palavra": palavra,
@@ -704,16 +842,17 @@ class GameManager:
                 "posicao": dados["posicao"],
 
                 "similaridade": float(
-                    dados["similaridade"]
+                    similaridade
                 ),
 
                 "proximidade": float(
-                    dados["similaridade"]
+                    proximidade
                 )
             })
 
+        print()
         print(
-            f"\n[DESISTÊNCIA] "
+            "[DESISTÊNCIA] "
             f"Palavra secreta: "
             f"{palavra_secreta}"
         )

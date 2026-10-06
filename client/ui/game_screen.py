@@ -6,6 +6,7 @@ from client.network.rpc_client import RPCClient
 from client.ui.loading_spinner import LoadingSpinner
 from shared.constants import NOME_DO_JOGO
 
+
 class GameScreen(tk.Frame):
     """
     Tela principal da partida.
@@ -41,6 +42,10 @@ class GameScreen(tk.Frame):
     RED_HOVER = "#dc2626"
 
     BORDER = "#334155"
+
+    # ==========================================================
+    # INICIALIZAÇÃO
+    # ==========================================================
 
     def __init__(self, root, screen_manager):
 
@@ -90,6 +95,7 @@ class GameScreen(tk.Frame):
         janela = self.winfo_toplevel()
 
         try:
+
             janela.attributes(
                 "-fullscreen",
                 True
@@ -98,6 +104,7 @@ class GameScreen(tk.Frame):
             self.tela_cheia = True
 
         except tk.TclError:
+
             pass
 
     def alternar_tela_cheia(self, event=None):
@@ -107,11 +114,14 @@ class GameScreen(tk.Frame):
         self.tela_cheia = not self.tela_cheia
 
         try:
+
             janela.attributes(
                 "-fullscreen",
                 self.tela_cheia
             )
+
         except tk.TclError:
+
             pass
 
     # ==========================================================
@@ -157,7 +167,7 @@ class GameScreen(tk.Frame):
         )
 
         # ------------------------------------------------------
-        # TÍTULO DA PARTIDA
+        # TÍTULO
         # ------------------------------------------------------
 
         titulo = tk.Label(
@@ -217,12 +227,10 @@ class GameScreen(tk.Frame):
             padx=(0, 12)
         )
 
-        # Entrada
         self.criar_painel_entrada(
             painel_esquerdo
         )
 
-        # Cards de informação
         self.criar_cards(
             painel_esquerdo
         )
@@ -356,10 +364,7 @@ class GameScreen(tk.Frame):
     # PAINEL DE ENTRADA
     # ==========================================================
 
-    def criar_painel_entrada(
-        self,
-        parent
-    ):
+    def criar_painel_entrada(self, parent):
 
         painel = tk.Frame(
             parent,
@@ -408,7 +413,10 @@ class GameScreen(tk.Frame):
             pady=(0, 25)
         )
 
-        # Campo
+        # ------------------------------------------------------
+        # CAMPO
+        # ------------------------------------------------------
+
         campo_frame = tk.Frame(
             linha,
             bg=self.BG_DARK
@@ -436,17 +444,15 @@ class GameScreen(tk.Frame):
             padx=15
         )
 
-        self.campo_palavra.insert(
-            0,
-            ""
-        )
-
         self.campo_palavra.bind(
             "<Return>",
             lambda event: self.enviar_tentativa()
         )
 
-        # Botão enviar
+        # ------------------------------------------------------
+        # BOTÃO ENVIAR
+        # ------------------------------------------------------
+
         self.botao_enviar = tk.Button(
             linha,
             text="ENVIAR  →",
@@ -478,10 +484,7 @@ class GameScreen(tk.Frame):
     # CARDS
     # ==========================================================
 
-    def criar_cards(
-        self,
-        parent
-    ):
+    def criar_cards(self, parent):
 
         area = tk.Frame(
             parent,
@@ -610,7 +613,10 @@ class GameScreen(tk.Frame):
             pady=(0, 5)
         )
 
-        # Dica
+        # ------------------------------------------------------
+        # DICA
+        # ------------------------------------------------------
+
         self.label_dica = tk.Label(
             parent,
             text="",
@@ -628,14 +634,7 @@ class GameScreen(tk.Frame):
     # HISTÓRICO
     # ==========================================================
 
-    def criar_historico(
-        self,
-        parent
-    ):
-
-        # ------------------------------------------------------
-        # CABEÇALHO
-        # ------------------------------------------------------
+    def criar_historico(self, parent):
 
         cabecalho = tk.Frame(
             parent,
@@ -699,7 +698,6 @@ class GameScreen(tk.Frame):
             selectmode="browse"
         )
 
-        # Cabeçalhos
         self.tabela.heading(
             "ordem",
             text="#"
@@ -720,7 +718,6 @@ class GameScreen(tk.Frame):
             text="PROXIMIDADE"
         )
 
-        # Colunas
         self.tabela.column(
             "ordem",
             width=55,
@@ -756,10 +753,13 @@ class GameScreen(tk.Frame):
         style = ttk.Style()
 
         try:
+
             style.theme_use(
                 "clam"
             )
+
         except tk.TclError:
+
             pass
 
         style.configure(
@@ -796,14 +796,14 @@ class GameScreen(tk.Frame):
             ]
         )
 
-        # Tentativa
+        # Tentativas
         self.tabela.tag_configure(
             "tentativa",
             background=self.BG_DARK,
             foreground=self.TEXT
         )
 
-        # Dica
+        # Dicas
         self.tabela.tag_configure(
             "dica",
             background="#281b45",
@@ -953,7 +953,7 @@ class GameScreen(tk.Frame):
             command=self.nova_partida
         )
 
-        # Não aparece inicialmente.
+        # Fica oculto inicialmente.
 
         # ------------------------------------------------------
         # MENU
@@ -1013,7 +1013,6 @@ class GameScreen(tk.Frame):
         thread.start()
 
     def _processar_inicio_partida(self):
-        """Executa a conexão e a criação da partida fora da UI."""
 
         try:
 
@@ -1056,9 +1055,9 @@ class GameScreen(tk.Frame):
                 None,
                 erro
             )
-    
+
     # ==========================================================
-    # ENVIAR TENTATIVA
+    # LOADING DA PARTIDA
     # ==========================================================
 
     def criar_loading_partida(self):
@@ -1121,7 +1120,7 @@ class GameScreen(tk.Frame):
             "◐ INICIANDO...",
             "INICIANDO..."
         )
-    
+
     def _mostrar_loading_partida(self, mostrar):
 
         if mostrar:
@@ -1142,7 +1141,11 @@ class GameScreen(tk.Frame):
             self.spinner_partida.stop()
 
             self.loading_partida_frame.place_forget()
-    
+
+    # ==========================================================
+    # ENVIAR TENTATIVA
+    # ==========================================================
+
     def enviar_tentativa(self):
 
         if self._enviando_tentativa:
@@ -1204,10 +1207,6 @@ class GameScreen(tk.Frame):
         thread.start()
 
     def _processar_tentativa(self, palavra):
-        """
-        Executa a chamada RPC fora da thread principal
-        do Tkinter.
-        """
 
         try:
 
@@ -1233,6 +1232,10 @@ class GameScreen(tk.Frame):
                 erro
             )
 
+    # ==========================================================
+    # FINALIZAR TENTATIVA
+    # ==========================================================
+
     def _finalizar_tentativa(
         self,
         palavra,
@@ -1240,13 +1243,39 @@ class GameScreen(tk.Frame):
         erro
     ):
         """
-        Atualiza a interface após a resposta
-        do servidor.
+        Finaliza o processamento da tentativa.
+
+        IMPORTANTE:
+        O campo é sempre limpo depois que a tentativa
+        termina de ser processada.
         """
 
+        # Para o spinner
         self.loading_spinner.stop()
 
+        # Libera o controle
         self._enviando_tentativa = False
+
+        # ------------------------------------------------------
+        # REATIVA O CAMPO PARA PODER ALTERÁ-LO
+        # ------------------------------------------------------
+
+        self.campo_palavra.config(
+            state="normal"
+        )
+
+        # ------------------------------------------------------
+        # LIMPA A PALAVRA DIGITADA
+        # ------------------------------------------------------
+
+        self.campo_palavra.delete(
+            0,
+            tk.END
+        )
+
+        # ------------------------------------------------------
+        # ERRO DE COMUNICAÇÃO
+        # ------------------------------------------------------
 
         if erro is not None:
 
@@ -1259,9 +1288,38 @@ class GameScreen(tk.Frame):
                 self.partida_ativa
             )
 
+            if self.partida_ativa:
+
+                self.campo_palavra.focus_set()
+
+            return
+
+        # ------------------------------------------------------
+        # RESPOSTA INVÁLIDA
+        # ------------------------------------------------------
+
+        if resultado is None:
+
+            self.label_status.config(
+                text="O servidor não retornou uma resposta.",
+                fg=self.RED
+            )
+
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
+
+            if self.partida_ativa:
+
+                self.campo_palavra.focus_set()
+
             return
 
         try:
+
+            # --------------------------------------------------
+            # TENTATIVA RECUSADA
+            # --------------------------------------------------
 
             if not resultado.get(
                 "sucesso",
@@ -1280,14 +1338,21 @@ class GameScreen(tk.Frame):
                     self.partida_ativa
                 )
 
+                if self.partida_ativa:
+
+                    self.campo_palavra.focus_set()
+
                 return
 
-            self.campo_palavra.delete(
-                0,
-                tk.END
-            )
+            # --------------------------------------------------
+            # ATUALIZA HISTÓRICO
+            # --------------------------------------------------
 
             self.atualizar_historico()
+
+            # --------------------------------------------------
+            # RESULTADO
+            # --------------------------------------------------
 
             posicao = resultado.get(
                 "posicao",
@@ -1309,11 +1374,19 @@ class GameScreen(tk.Frame):
 
             self.partida_ativa = not acertou
 
+            # --------------------------------------------------
+            # ATUALIZA POSIÇÃO
+            # --------------------------------------------------
+
             if posicao != "-":
 
                 self.label_posicao.config(
                     text=f"#{posicao}"
                 )
+
+            # --------------------------------------------------
+            # ATUALIZA PROXIMIDADE
+            # --------------------------------------------------
 
             if proximidade != "-":
 
@@ -1331,6 +1404,10 @@ class GameScreen(tk.Frame):
                     self.label_proximidade.config(
                         text=str(proximidade)
                     )
+
+            # --------------------------------------------------
+            # ACERTOU
+            # --------------------------------------------------
 
             if acertou:
 
@@ -1355,6 +1432,10 @@ class GameScreen(tk.Frame):
 
                 self._finalizar_partida()
 
+            # --------------------------------------------------
+            # NÃO ACERTOU
+            # --------------------------------------------------
+
             else:
 
                 self.label_status.config(
@@ -1365,6 +1446,32 @@ class GameScreen(tk.Frame):
                     fg=self.BLUE
                 )
 
+            # --------------------------------------------------
+            # ATUALIZA BOTÕES
+            # --------------------------------------------------
+
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
+
+            # --------------------------------------------------
+            # FOCO NO CAMPO
+            # --------------------------------------------------
+
+            if self.partida_ativa:
+
+                self.campo_palavra.focus_set()
+
+        except Exception as erro_processamento:
+
+            self.label_status.config(
+                text=(
+                    "Erro ao processar resposta: "
+                    f"{erro_processamento}"
+                ),
+                fg=self.RED
+            )
+
             self._atualizar_estado_botoes(
                 self.partida_ativa
             )
@@ -1373,16 +1480,9 @@ class GameScreen(tk.Frame):
 
                 self.campo_palavra.focus_set()
 
-        except Exception as erro:
-
-            self.label_status.config(
-                text=f"Erro ao processar resposta: {erro}",
-                fg=self.RED
-            )
-
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+    # ==========================================================
+    # FINALIZAR INÍCIO DA PARTIDA
+    # ==========================================================
 
     def _finalizar_inicio_partida(
         self,
@@ -1454,6 +1554,12 @@ class GameScreen(tk.Frame):
             historico
         )
 
+        # Garante campo vazio
+        self.campo_palavra.delete(
+            0,
+            tk.END
+        )
+
         self.campo_palavra.focus_set()
 
     # ==========================================================
@@ -1475,6 +1581,12 @@ class GameScreen(tk.Frame):
 
             return
 
+        self._preencher_historico(
+            historico
+        )
+
+    def _preencher_historico(self, historico):
+
         # Limpa tabela
         for item in self.tabela.get_children():
 
@@ -1482,7 +1594,7 @@ class GameScreen(tk.Frame):
                 item
             )
 
-        # Preenche
+        # Preenche tabela
         for indice, registro in enumerate(
             historico,
             start=1
@@ -1515,6 +1627,10 @@ class GameScreen(tk.Frame):
 
                 tag = "dica"
 
+            elif tipo == "vitoria":
+
+                tag = "vitoria"
+
             else:
 
                 tag = "tentativa"
@@ -1537,7 +1653,7 @@ class GameScreen(tk.Frame):
                 tags=(tag,)
             )
 
-        # Scroll para o final
+        # Scroll para o último registro
         itens = self.tabela.get_children()
 
         if itens:
@@ -1550,10 +1666,7 @@ class GameScreen(tk.Frame):
     # FORMATAR PROXIMIDADE
     # ==========================================================
 
-    def _formatar_proximidade(
-        self,
-        valor
-    ):
+    def _formatar_proximidade(self, valor):
 
         try:
 
@@ -1576,6 +1689,7 @@ class GameScreen(tk.Frame):
             not self.partida_ativa
             or self._processando_acao
         ):
+
             return
 
         self._processando_acao = True
@@ -1685,7 +1799,7 @@ class GameScreen(tk.Frame):
             if proximidade is not None:
 
                 texto += (
-                    f"  •  "
+                    "  •  "
                     f"{self._formatar_proximidade(proximidade)}"
                 )
 
@@ -1694,7 +1808,7 @@ class GameScreen(tk.Frame):
                 fg=self.PURPLE
             )
 
-            # Atualiza o histórico diretamente do servidor.
+            # Atualiza histórico
             self.atualizar_historico()
 
         else:
@@ -1721,6 +1835,7 @@ class GameScreen(tk.Frame):
             not self.partida_ativa
             or self._processando_acao
         ):
+
             return
 
         confirmar = messagebox.askyesno(
@@ -1730,6 +1845,7 @@ class GameScreen(tk.Frame):
         )
 
         if not confirmar:
+
             return
 
         self._processando_acao = True
@@ -1783,6 +1899,19 @@ class GameScreen(tk.Frame):
 
             self.label_status.config(
                 text=f"Erro ao desistir: {erro}",
+                fg=self.RED
+            )
+
+            self._atualizar_estado_botoes(
+                self.partida_ativa
+            )
+
+            return
+
+        if resultado is None:
+
+            self.label_status.config(
+                text="O servidor não retornou uma resposta.",
                 fg=self.RED
             )
 
@@ -1858,6 +1987,7 @@ class GameScreen(tk.Frame):
     def nova_partida(self):
 
         if self._criando_partida:
+
             return
 
         # Limpa histórico
@@ -1867,7 +1997,11 @@ class GameScreen(tk.Frame):
                 item
             )
 
-        # Limpa entrada
+        # Limpa campo
+        self.campo_palavra.config(
+            state="normal"
+        )
+
         self.campo_palavra.delete(
             0,
             tk.END
@@ -1933,10 +2067,7 @@ class GameScreen(tk.Frame):
     # VITÓRIA
     # ==========================================================
 
-    def _mostrar_vitoria(
-        self,
-        palavra
-    ):
+    def _mostrar_vitoria(self, palavra):
 
         messagebox.showinfo(
             "🎉 Parabéns!",
@@ -1981,9 +2112,9 @@ class GameScreen(tk.Frame):
 
         janela.grab_set()
 
-        # ======================================================
+        # ------------------------------------------------------
         # CABEÇALHO
-        # ======================================================
+        # ------------------------------------------------------
 
         tk.Label(
             janela,
@@ -2003,9 +2134,9 @@ class GameScreen(tk.Frame):
             fg=self.WHITE
         ).pack()
 
-        # ======================================================
-        # PALAVRA
-        # ======================================================
+        # ------------------------------------------------------
+        # PALAVRA SECRETA
+        # ------------------------------------------------------
 
         quadro = tk.Frame(
             janela,
@@ -2040,9 +2171,9 @@ class GameScreen(tk.Frame):
             pady=(0, 15)
         )
 
-        # ======================================================
+        # ------------------------------------------------------
         # TÍTULO
-        # ======================================================
+        # ------------------------------------------------------
 
         tk.Label(
             janela,
@@ -2056,9 +2187,9 @@ class GameScreen(tk.Frame):
             pady=(0, 10)
         )
 
-        # ======================================================
+        # ------------------------------------------------------
         # TABELA
-        # ======================================================
+        # ------------------------------------------------------
 
         quadro_tabela = tk.Frame(
             janela,
@@ -2141,7 +2272,7 @@ class GameScreen(tk.Frame):
         )
 
         # ------------------------------------------------------
-        # Dados
+        # DADOS
         # ------------------------------------------------------
 
         for item in palavras_proximas:
@@ -2174,9 +2305,9 @@ class GameScreen(tk.Frame):
                 )
             )
 
-        # ======================================================
+        # ------------------------------------------------------
         # BOTÃO
-        # ======================================================
+        # ------------------------------------------------------
 
         tk.Button(
             janela,
@@ -2233,7 +2364,6 @@ class GameScreen(tk.Frame):
 
     def voltar_menu(self):
 
-        # Sai da tela cheia antes de voltar
         try:
 
             self.winfo_toplevel().attributes(
