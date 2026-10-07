@@ -413,9 +413,10 @@ class GameManager:
     # ============================================================
 
     def obter_historico(self):
-
-        return list(
-            self.historico
+        return sorted(
+            self.historico,
+            key=lambda registro: registro["proximidade"],
+            reverse=True
         )
 
     # ============================================================
