@@ -1171,22 +1171,7 @@ class GameScreen(tk.Frame):
             return
 
         self._enviando_tentativa = True
-
-        self.campo_palavra.config(
-            state="disabled"
-        )
-
-        self.botao_enviar.config(
-            state="disabled"
-        )
-
-        self.botao_dica.config(
-            state="disabled"
-        )
-
-        self.botao_desistir.config(
-            state="disabled"
-        )
+        self._bloquear_acoes()
 
         self.label_status.config(
             text="Enviando tentativa...",
@@ -1255,9 +1240,7 @@ class GameScreen(tk.Frame):
                 fg=self.RED
             )
 
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+            self._liberar_acoes()
 
             return
 
@@ -1365,9 +1348,7 @@ class GameScreen(tk.Frame):
                     fg=self.BLUE
                 )
 
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+            self._liberar_acoes()
 
             if self.partida_ativa:
 
@@ -1380,9 +1361,7 @@ class GameScreen(tk.Frame):
                 fg=self.RED
             )
 
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+            self._liberar_acoes()
 
     def _finalizar_inicio_partida(
         self,
@@ -1579,10 +1558,7 @@ class GameScreen(tk.Frame):
             return
 
         self._processando_acao = True
-
-        self._atualizar_estado_botoes(
-            False
-        )
+        self._bloquear_acoes()
 
         self.spinner_dica.start()
 
@@ -1632,9 +1608,7 @@ class GameScreen(tk.Frame):
                 fg=self.RED
             )
 
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+            self._liberar_acoes()
 
             return
 
@@ -1645,9 +1619,7 @@ class GameScreen(tk.Frame):
                 fg="#f59e0b"
             )
 
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+            self._liberar_acoes()
 
             return
 
@@ -1707,9 +1679,7 @@ class GameScreen(tk.Frame):
                 fg="#f59e0b"
             )
 
-        self._atualizar_estado_botoes(
-            self.partida_ativa
-        )
+        self._liberar_acoes()
 
     # ==========================================================
     # DESISTIR
@@ -1733,10 +1703,7 @@ class GameScreen(tk.Frame):
             return
 
         self._processando_acao = True
-
-        self._atualizar_estado_botoes(
-            False
-        )
+        self._bloquear_acoes()
 
         self.spinner_desistir.start()
 
@@ -1786,9 +1753,7 @@ class GameScreen(tk.Frame):
                 fg=self.RED
             )
 
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+            self._liberar_acoes()
 
             return
 
@@ -1805,9 +1770,7 @@ class GameScreen(tk.Frame):
                 fg=self.RED
             )
 
-            self._atualizar_estado_botoes(
-                self.partida_ativa
-            )
+            self._liberar_acoes()
 
             return
 
@@ -2204,6 +2167,7 @@ class GameScreen(tk.Frame):
         self,
         ativo
     ):
+        """Atualiza o estado visual dos controles da partida."""
 
         estado = (
             "normal"
@@ -2216,16 +2180,87 @@ class GameScreen(tk.Frame):
         )
 
         self.botao_enviar.config(
-            state=estado
+            state=estado,
+            bg=self.BLUE if ativo else self.BORDER,
+            fg=self.WHITE if ativo else self.TEXT_MUTED,
+            activebackground=(
+                self.BLUE_HOVER
+                if ativo
+                else self.BORDER
+            )
         )
 
         self.botao_dica.config(
-            state=estado
+            state=estado,
+            bg=self.PURPLE if ativo else self.BORDER,
+            fg=self.WHITE if ativo else self.TEXT_MUTED,
+            activebackground=(
+                self.PURPLE_HOVER
+                if ativo
+                else self.BORDER
+            )
         )
 
         self.botao_desistir.config(
-            state=estado
+            state=estado,
+            bg=self.RED if ativo else self.BORDER,
+            fg=self.WHITE if ativo else self.TEXT_MUTED,
+            activebackground=(
+                self.RED_HOVER
+                if ativo
+                else self.BORDER
+            )
         )
+
+        cursor = "hand2" if ativo else "arrow"
+
+        for botao in (
+            self.botao_enviar,
+            self.botao_dica,
+            self.botao_desistir
+        ):
+            botao.config(
+                cursor=cursor
+            )
+
+    def _bloquear_acoes(self):
+        """Bloqueia todas as ações enquanto uma comunicação está em andamento."""
+
+        self.campo_palavra.config(
+            state="disabled"
+        )
+
+        for botao in (
+            self.botao_enviar,
+            self.botao_dica,
+            self.botao_desistir
+        ):
+            botao.config(
+                state="disabled",
+                bg=self.BORDER,
+                fg=self.TEXT_MUTED,
+                activebackground=self.BORDER,
+                activeforeground=self.TEXT_MUTED,
+                cursor="arrow"
+            )
+
+    def _liberar_acoes(self):
+        """Libera novamente as ações quando a comunicação termina."""
+
+        self._atualizar_estado_botoes(
+            self.partida_ativa
+        )
+
+        cursor = "hand2" if self.partida_ativa else "arrow"
+
+        for botao in (
+            self.botao_enviar,
+            self.botao_dica,
+            self.botao_desistir
+        ):
+            botao.config(
+                cursor=cursor
+            )
 
     # ==========================================================
     # VOLTAR AO MENU
