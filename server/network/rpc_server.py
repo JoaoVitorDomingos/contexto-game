@@ -81,4 +81,11 @@ class RPCServer:
             f"http://{self.host}:{self.porta}"
         )
 
-        self.servidor.serve_forever()
+        try:
+            self.servidor.serve_forever()
+
+        except KeyboardInterrupt:
+            print("\nServidor encerrado pelo usuário.")
+
+        finally:
+            self.servidor.server_close()
