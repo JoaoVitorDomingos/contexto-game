@@ -246,19 +246,7 @@ Caso o arquivo ainda não esteja disponível, o componente responsável pelo car
 
 Depois que o conteúdo estiver disponível localmente, ele pode ser reutilizado sem a necessidade de uma nova obtenção.
 
-## 10. Testes
-
-Os componentes do projeto são testados individualmente durante o desenvolvimento.
-
-Quando existirem módulos de teste no projeto, eles devem ser executados a partir da raiz utilizando o formato:
-
-```powershell
-python -m caminho.do.modulo_de_teste
-```
-
-A comunicação RPC também deve ser testada com o servidor em execução antes da integração completa com a interface gráfica.
-
-## 11. Autores
+## 10. Autores
 
 **Guilherme Henrique de Sousa**
 
