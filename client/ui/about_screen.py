@@ -10,7 +10,6 @@ from shared.constants import (
     NOME_UNIVERSIDADE
 )
 
-
 # =========================
 # CORES
 # =========================
@@ -45,11 +44,7 @@ class AboutScreen(tk.Frame):
         self.criar_interface()
 
     def criar_interface(self):
-
-        # =========================================================
-        # CABEÇALHO
-        # =========================================================
-
+        
         header = tk.Frame(
             self,
             bg=BG_DARK,

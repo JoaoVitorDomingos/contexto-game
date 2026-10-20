@@ -22,35 +22,9 @@ class GameManager:
 
         self.semantic_model = None
 
-        # ========================================================
-        # CACHE DOS RANKINGS
-        # ========================================================
-        #
-        # Guarda o ranking já calculado para cada palavra secreta.
-        #
-        # Exemplo:
-        #
-        # {
-        #     "casa": {...},
-        #     "janela": {...},
-        #     "vidro": {...}
-        # }
-        #
-        # Assim, se uma palavra for sorteada novamente,
-        # não precisamos recalcular seu ranking.
-        # ========================================================
-
         self._cache_rankings = {}
 
-        # ========================================================
-        # CARREGA A IA UMA ÚNICA VEZ
-        # ========================================================
-
         self._carregar_ia()
-
-    # ============================================================
-    # CARREGAR IA
-    # ============================================================
 
     def _carregar_ia(self):
 
@@ -59,13 +33,8 @@ class GameManager:
         print("CARREGANDO IA")
         print("=" * 60)
 
-        # --------------------------------------------------------
-        # Carrega o livro
-        # --------------------------------------------------------
-
         loader = BookLoader()
 
-        # O BookLoader do projeto possui o método load()
         livro = loader.load()
 
         if not livro:
@@ -76,10 +45,6 @@ class GameManager:
         print(
             f"Livro carregado: {len(livro)} caracteres"
         )
-
-        # --------------------------------------------------------
-        # Processa o texto
-        # --------------------------------------------------------
 
         processor = TextProcessor(
             min_frequency=2
@@ -109,10 +74,6 @@ class GameManager:
             f"{len(vocabulario)} palavras"
         )
 
-        # --------------------------------------------------------
-        # Carrega modelo semântico
-        # --------------------------------------------------------
-
         self.semantic_model = SemanticModel(
             vocabulario
         )
@@ -137,10 +98,6 @@ class GameManager:
         print("=" * 60)
         print()
 
-    # ============================================================
-    # INICIAR PARTIDA
-    # ============================================================
-
     def iniciar_partida(self):
 
         if not self.vocabulario:
@@ -148,10 +105,6 @@ class GameManager:
                 "sucesso": False,
                 "mensagem": "O vocabulário do jogo está vazio."
             }
-
-        # --------------------------------------------------------
-        # Escolhe uma palavra secreta aleatória
-        # --------------------------------------------------------
 
         self.palavra_secreta = random.choice(
             self.vocabulario
@@ -162,10 +115,6 @@ class GameManager:
             f"[PARTIDA] Palavra secreta: "
             f"{self.palavra_secreta}"
         )
-
-        # ========================================================
-        # VERIFICA O CACHE
-        # ========================================================
 
         if self.palavra_secreta in self._cache_rankings:
 
@@ -183,19 +132,11 @@ class GameManager:
                 "[PARTIDA] Calculando ranking..."
             )
 
-            # ----------------------------------------------------
-            # Calcula o ranking somente na primeira vez
-            # ----------------------------------------------------
-
             ranking = (
                 self.semantic_model.build_ranking(
                     self.palavra_secreta
                 )
             )
-
-            # ----------------------------------------------------
-            # Guarda no cache
-            # ----------------------------------------------------
 
             self._cache_rankings[
                 self.palavra_secreta
@@ -207,10 +148,6 @@ class GameManager:
                 "[PARTIDA] Ranking calculado e "
                 "armazenado no cache."
             )
-
-        # --------------------------------------------------------
-        # Limpa os dados da partida anterior
-        # --------------------------------------------------------
 
         self.tentativas = []
         self.historico = []
@@ -227,10 +164,6 @@ class GameManager:
             "mensagem": "Partida iniciada com sucesso."
         }
 
-    # ============================================================
-    # TENTAR PALAVRA
-    # ============================================================
-
     def tentar_palavra(self, palavra):
 
         if not self.partida_ativa:
@@ -245,10 +178,6 @@ class GameManager:
                 "mensagem": "Digite uma palavra."
             }
 
-        # --------------------------------------------------------
-        # Normalização
-        # --------------------------------------------------------
-
         palavra = palavra.strip().lower()
 
         palavra = self._normalizar_palavra(
@@ -261,10 +190,6 @@ class GameManager:
                 "mensagem": "Digite uma palavra válida."
             }
 
-        # --------------------------------------------------------
-        # Verifica se a palavra já foi tentada
-        # --------------------------------------------------------
-
         for tentativa in self.tentativas:
 
             if tentativa["palavra"] == palavra:
@@ -273,10 +198,6 @@ class GameManager:
                     "sucesso": False,
                     "mensagem": "Você já tentou essa palavra."
                 }
-
-        # --------------------------------------------------------
-        # Verifica se acertou a palavra secreta
-        # --------------------------------------------------------
 
         if palavra == self.palavra_secreta:
 
@@ -312,10 +233,6 @@ class GameManager:
                 )
             }
 
-        # --------------------------------------------------------
-        # Procura palavra no ranking
-        # --------------------------------------------------------
-
         dados = self.ranking.get(
             palavra
         )
@@ -330,10 +247,6 @@ class GameManager:
                 )
             }
 
-        # --------------------------------------------------------
-        # Pega os valores calculados pela IA
-        # --------------------------------------------------------
-
         posicao = dados.get(
             "posicao"
         )
@@ -345,19 +258,6 @@ class GameManager:
         proximidade = dados.get(
             "proximidade"
         )
-
-        # --------------------------------------------------------
-        # SEGURANÇA:
-        # proximidade precisa ser ESTRITAMENTE positiva.
-        #
-        # Valores como:
-        #
-        # -0.0011
-        # -0.00001
-        # 0
-        #
-        # não podem entrar no jogo.
-        # --------------------------------------------------------
 
         if proximidade is None:
             return {
@@ -376,10 +276,6 @@ class GameManager:
                     "semântica não positiva."
                 )
             }
-
-        # --------------------------------------------------------
-        # Registra tentativa
-        # --------------------------------------------------------
 
         registro = {
             "ordem": len(self.historico) + 1,
@@ -408,20 +304,12 @@ class GameManager:
             "mensagem": "Tentativa registrada."
         }
 
-    # ============================================================
-    # OBTER HISTÓRICO
-    # ============================================================
-
     def obter_historico(self):
         return sorted(
             self.historico,
             key=lambda registro: registro["proximidade"],
             reverse=True
         )
-
-    # ============================================================
-    # SOLICITAR DICA
-    # ============================================================
 
     def solicitar_dica(self):
 
@@ -432,19 +320,11 @@ class GameManager:
                 "mensagem": "Não há uma partida ativa."
             }
 
-        # --------------------------------------------------------
-        # Palavras que já apareceram no histórico
-        # --------------------------------------------------------
-
         palavras_usadas = {
             registro["palavra"]
             for registro in self.historico
             if registro.get("palavra")
         }
-
-        # --------------------------------------------------------
-        # Descobre a melhor posição alcançada
-        # --------------------------------------------------------
 
         posicoes_validas = []
 
@@ -475,10 +355,6 @@ class GameManager:
 
             melhor_posicao = None
 
-        # ========================================================
-        # PRIMEIRA DICA
-        # ========================================================
-
         if melhor_posicao is None:
 
             total_palavras = len(
@@ -491,11 +367,6 @@ class GameManager:
                     "sucesso": False,
                     "mensagem": "O ranking está vazio."
                 }
-
-            # ----------------------------------------------------
-            # Primeira dica:
-            # aproximadamente na região de 1/5 do ranking.
-            # ----------------------------------------------------
 
             inicio = max(
                 50,
@@ -526,10 +397,6 @@ class GameManager:
                 if palavra in palavras_usadas:
                     continue
 
-                # ------------------------------------------------
-                # Só aceita proximidade positiva
-                # ------------------------------------------------
-
                 proximidade = dados.get(
                     "proximidade"
                 )
@@ -546,15 +413,7 @@ class GameManager:
                         (palavra, dados)
                     )
 
-        # ========================================================
-        # DICAS SEGUINTES
-        # ========================================================
-
         else:
-
-            # ----------------------------------------------------
-            # A nova dica precisa obrigatoriamente ser melhor.
-            # ----------------------------------------------------
 
             limite_superior = (
                 melhor_posicao - 1
@@ -569,10 +428,6 @@ class GameManager:
                         "para fornecer uma nova dica."
                     )
                 }
-
-            # ----------------------------------------------------
-            # Define uma faixa próxima da posição atual.
-            # ----------------------------------------------------
 
             intervalo = max(
                 100,
@@ -592,21 +447,14 @@ class GameManager:
 
                 posicao = dados["posicao"]
 
-                # Nunca revela a palavra secreta
                 if palavra == self.palavra_secreta:
                     continue
 
-                # Nunca repete palavra
                 if palavra in palavras_usadas:
                     continue
 
-                # Precisa ser melhor que a melhor posição
                 if posicao >= melhor_posicao:
                     continue
-
-                # ------------------------------------------------
-                # Só aceita proximidade positiva
-                # ------------------------------------------------
 
                 proximidade = dados.get(
                     "proximidade"
@@ -624,16 +472,7 @@ class GameManager:
                         (palavra, dados)
                     )
 
-        # ========================================================
-        # SE NÃO ENCONTROU CANDIDATOS NA FAIXA
-        # ========================================================
-
         if not candidatos:
-
-            # ----------------------------------------------------
-            # Se já existe uma melhor posição, procura qualquer
-            # palavra ainda melhor.
-            # ----------------------------------------------------
 
             if melhor_posicao is not None:
 
@@ -664,11 +503,6 @@ class GameManager:
                         (palavra, dados)
                     )
 
-            # ----------------------------------------------------
-            # Se for a primeira dica, procura qualquer palavra
-            # disponível.
-            # ----------------------------------------------------
-
             else:
 
                 for palavra, dados in self.ranking.items():
@@ -693,10 +527,6 @@ class GameManager:
                         (palavra, dados)
                     )
 
-        # ========================================================
-        # NENHUM CANDIDATO
-        # ========================================================
-
         if not candidatos:
 
             return {
@@ -706,10 +536,6 @@ class GameManager:
                     "para fornecer uma dica melhor."
                 )
             }
-
-        # ========================================================
-        # ESCOLHE A DICA
-        # ========================================================
 
         palavra, dados = random.choice(
             candidatos
@@ -725,10 +551,6 @@ class GameManager:
             "proximidade"
         )
 
-        # --------------------------------------------------------
-        # Segurança final
-        # --------------------------------------------------------
-
         if proximidade is None or float(proximidade) <= 0:
 
             return {
@@ -738,10 +560,6 @@ class GameManager:
                     "proximidade positiva."
                 )
             }
-
-        # ========================================================
-        # REGISTRA DICA NO HISTÓRICO
-        # ========================================================
 
         registro = {
             "ordem": len(self.historico) + 1,
@@ -762,10 +580,6 @@ class GameManager:
             f"| proximidade: {float(proximidade):.10f}"
         )
 
-        # ========================================================
-        # RETORNO PARA O CLIENTE
-        # ========================================================
-
         return {
             "sucesso": True,
             "palavra": palavra,
@@ -774,10 +588,6 @@ class GameManager:
             "similaridade": float(similaridade),
             "mensagem": "Dica encontrada."
         }
-
-    # ============================================================
-    # DESISTIR
-    # ============================================================
 
     def desistir(self):
 
@@ -788,30 +598,16 @@ class GameManager:
                 "mensagem": "Não há uma partida ativa."
             }
 
-        # --------------------------------------------------------
-        # Encerra a partida
-        # --------------------------------------------------------
-
         self.partida_ativa = False
 
         palavra_secreta = (
             self.palavra_secreta
         )
 
-        # --------------------------------------------------------
-        # Ordena o ranking
-        #
-        # 1 = mais próxima
-        # --------------------------------------------------------
-
         ranking_ordenado = sorted(
             self.ranking.items(),
             key=lambda item: item[1]["posicao"]
         )
-
-        # --------------------------------------------------------
-        # Pega as 30 palavras mais próximas
-        # --------------------------------------------------------
 
         palavras_proximas = []
 
@@ -824,11 +620,6 @@ class GameManager:
             similaridade = dados.get(
                 "similaridade"
             )
-
-            # ----------------------------------------------------
-            # Segurança:
-            # não retorna palavras com proximidade <= 0.
-            # ----------------------------------------------------
 
             if proximidade is None:
                 continue
@@ -872,10 +663,6 @@ class GameManager:
 
             "mensagem": "Partida encerrada."
         }
-
-    # ============================================================
-    # NORMALIZAÇÃO
-    # ============================================================
 
     def _normalizar_palavra(
         self,
