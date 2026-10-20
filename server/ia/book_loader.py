@@ -1,12 +1,10 @@
 from pathlib import Path
 import requests
 
-
 BOOK_URLS = [
     "https://www.gutenberg.org/cache/epub/26110/pg26110.txt",
     "https://www.gutenberg.org/files/26110/26110-8.txt",
 ]
-
 
 class BookLoader:
     def __init__(self, data_dir=None):

@@ -1,6 +1,5 @@
 import spacy
 
-
 class SemanticModel:
     MODEL_NAME = "pt_core_news_md"
 
@@ -67,11 +66,6 @@ class SemanticModel:
             )
 
     def similarity(self, word_a, word_b):
-        """
-        Calcula a similaridade de cosseno entre duas palavras.
-
-        Retorna um valor entre -1 e 1.
-        """
 
         vector_a = self.vectors.get(word_a)
         vector_b = self.vectors.get(word_b)
@@ -92,14 +86,6 @@ class SemanticModel:
         return float(similaridade)
 
     def calcular_proximidade(self, similaridade):
-        """
-        Converte a similaridade para a proximidade utilizada pelo jogo.
-
-        Neste projeto, a proximidade mantém o próprio valor da
-        similaridade.
-
-        Valores <= 0 são considerados inválidos.
-        """
 
         if similaridade is None:
             return 0.0
@@ -112,12 +98,6 @@ class SemanticModel:
         return similaridade
 
     def build_ranking(self, secret_word):
-        """
-        Cria o ranking das palavras em relação à palavra secreta.
-
-        Somente palavras com similaridade estritamente maior que zero
-        entram no ranking.
-        """
 
         if secret_word not in self.vectors:
             raise ValueError(
@@ -154,27 +134,9 @@ class SemanticModel:
 
             similaridade = produto / (secret_norm * norm)
 
-            # -------------------------------------------------
-            # REGRA DO JOGO:
-            # somente similaridades ESTRITAMENTE positivas
-            # entram no ranking.
-            #
-            # Exemplos aceitos:
-            #   0.7
-            #   0.01
-            #   0.000001
-            #   0.0000001
-            #
-            # Exemplos descartados:
-            #   0
-            #   -0.001
-            #   -0.5
-            # -------------------------------------------------
             if similaridade <= 0:
                 continue
 
-            # Evita valores praticamente idênticos ao vetor
-            # da palavra secreta.
             if similaridade >= 0.999999:
                 continue
 

@@ -2,8 +2,6 @@ import re
 import unicodedata
 from collections import Counter
 
-
-# Lista própria, conforme solicitado no trabalho.
 STOPWORDS_PT = {
     "a", "ao", "aos", "as", "à", "às", "aquele", "aquela", "aqueles", "aquelas",
     "aquilo", "até", "com", "como", "contra", "da", "das", "de", "dela", "delas",
@@ -16,9 +14,7 @@ STOPWORDS_PT = {
     "ter", "tinha", "tinham", "tu", "um", "uma", "umas", "uns", "vai", "vão", "vos",
 }
 
-
 class TextProcessor:
-    """Normaliza o livro, tokeniza, remove stopwords e cria o vocabulário."""
 
     def __init__(self, min_frequency=2):
         self.min_frequency = min_frequency
